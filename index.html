@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dollar Nong · Photography</title>
+<style>
+:root{--b:#111;--w:#fff;--g:#f5f5f5;--t:#1a1a1a;--lg:#e8e8e8;--m:#888}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Helvetica,Arial,"Noto Sans SC",sans-serif;background:var(--w);color:var(--t);line-height:1.5;-webkit-font-smoothing:antialiased}
+
+/* Header */
+.header{position:fixed;top:0;left:0;right:0;z-index:100;background:var(--b);color:var(--w);height:56px;display:flex;align-items:center;padding:0 24px;user-select:none}
+.header .brand .name{font-size:18px;font-weight:700;letter-spacing:2px}
+.header .brand .tag{font-size:10px;font-weight:300;color:#777;letter-spacing:3px;display:block}
+.header .right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.counter{font-size:12px;color:#777;letter-spacing:1px}
+.lang-btn{background:none;border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);padding:4px 10px;font-size:11px;letter-spacing:1px;cursor:pointer;font-family:inherit;transition:all .2s}
+.lang-btn:hover{border-color:var(--w);color:var(--w)}
+.mg-btn{background:none;border:1px solid rgba(255,255,255,.25);color:var(--w);padding:6px 14px;font-size:12px;letter-spacing:1px;cursor:pointer;font-family:inherit;text-transform:uppercase;transition:all .2s}
+.mg-btn:hover{border-color:var(--w);background:rgba(255,255,255,.08)}
+
+/* Hero */
+.hero{margin-top:56px;height:65vh;min-height:380px;max-height:650px;position:relative;background:var(--g);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero .overlay{position:relative;z-index:2;text-align:center;padding:0 24px;color:var(--w);text-shadow:0 2px 16px rgba(0,0,0,.65)}
+.hero .overlay h1{font-size:clamp(20px,3.5vw,48px);font-weight:200;letter-spacing:6px;margin-bottom:6px}
+.hero .overlay .sub{font-size:clamp(12px,1.2vw,16px);font-weight:300;letter-spacing:3px;opacity:.8}
+
+/* Category Tabs */
+.tabs{display:flex;justify-content:center;border-bottom:1px solid var(--lg);background:var(--w);position:sticky;top:56px;z-index:50;padding:0 16px}
+.tab{position:relative;padding:16px 28px;font-size:12px;font-weight:500;letter-spacing:3px;text-transform:uppercase;color:var(--m);cursor:pointer;background:none;border:none;font-family:inherit;transition:color .2s}
+.tab:hover{color:var(--t)}
+.tab::after{content:'';position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:2px;background:var(--b);transition:width .25s}
+.tab.active{color:var(--b)}
+.tab.active::after{width:60%}
+.tab .n{font-size:10px;color:#bbb;margin-left:4px;font-weight:300}
+
+/* Gallery Grid */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:0;max-width:1600px;margin:0 auto}
+.item{position:relative;background:var(--g);overflow:hidden;cursor:pointer;aspect-ratio:3/4}
+.item a{display:block;width:100%;height:100%;text-decoration:none;color:inherit}
+.item img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .4s}
+.item:hover img{transform:scale(1.04)}
+.item .info{position:absolute;bottom:0;left:0;right:0;padding:20px 16px 16px;background:linear-gradient(transparent,rgba(0,0,0,.65));color:var(--w);opacity:0;transform:translateY(8px);transition:all .35s}
+.item:hover .info{opacity:1;transform:translateY(0)}
+.item .info .title{font-size:14px;font-weight:500;margin-bottom:2px}
+.item .info .cap{font-size:11px;font-weight:300;opacity:.75}
+.empty{grid-column:1/-1;text-align:center;padding:80px 24px;color:#bbb;font-size:14px;letter-spacing:1px}
+
+/* Lightbox */
+.lb{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.92);align-items:center;justify-content:center;padding:24px;cursor:pointer}
+.lb.on{display:flex}
+.lb img{max-width:93vw;max-height:88vh;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.5);border-radius:2px}
+.lb .c{position:absolute;top:20px;right:24px;color:var(--w);font-size:28px;cursor:pointer;opacity:.5;transition:opacity .2s;background:none;border:none;font-family:inherit;z-index:1}
+.lb .c:hover{opacity:1}
+.lb .n{position:absolute;top:50%;transform:translateY(-50%);color:var(--w);font-size:36px;cursor:pointer;opacity:.35;transition:opacity .2s;background:none;border:none;padding:16px;font-family:inherit;z-index:1}
+.lb .n:hover{opacity:.8}
+.lb .prev{left:8px}.lb .next{right:8px}
+.lb .m{position:absolute;bottom:24px;left:50%;transform:translateX(-50%);color:var(--w);font-size:12px;opacity:.6;text-align:center}
+
+/* Contact Footer */
+.footer{text-align:center;padding:64px 24px 48px;color:#999;font-size:12px;letter-spacing:1px;border-top:1px solid #eee;margin-top:32px}
+.footer .ft{font-weight:500;color:#666;margin-bottom:8px}
+.footer a{color:inherit;text-decoration:none;border-bottom:1px solid #ddd}
+
+/* Config bar */
+.config-bar{display:none;position:fixed;bottom:0;left:0;right:0;z-index:300;background:var(--b);color:var(--w);padding:8px 16px;font-size:11px;display:flex;align-items:center;gap:8px;justify-content:center}
+.config-bar.hidden{display:none!important}
+.config-bar input{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:var(--w);padding:4px 8px;border-radius:3px;font-size:11px;width:300px;font-family:inherit}
+.config-bar button{background:var(--w);color:var(--b);border:none;padding:4px 10px;border-radius:3px;font-size:11px;cursor:pointer}
+.config-bar .hint{color:#777;font-size:10px}
+
+/* Language */
+body:not(.en) .zh{display:inline}body:not(.en) .en{display:none}
+body.en .zh{display:none}body.en .en{display:inline}
+
+/* Loading */
+.loading-text{text-align:center;padding:40px;color:#ccc;font-size:13px;letter-spacing:2px}
+.error-text{text-align:center;padding:40px;color:#c88;font-size:13px}
+
+@media(max-width:768px){.grid{grid-template-columns:repeat(2,1fr)}.header{padding:0 12px}.header .brand .name{font-size:15px}.counter{display:none}.tab{padding:14px 16px;font-size:11px;letter-spacing:2px}}
+@media(max-width:480px){.grid{grid-template-columns:1fr}.hero{height:50vh;min-height:280px}.tab{padding:12px 10px;font-size:10px;letter-spacing:1px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="brand"><div class="name">DOLLAR NONG</div><span class="tag">PHOTOGRAPHY</span></div>
+  <div class="right">
+    <button class="lang-btn" onclick="tl()">EN</button>
+    <span class="counter" id="cnt">—</span>
+    <button class="mg-btn" onclick="goAdmin()"><span class="zh">管理</span><span class="en">Manage</span></button>
+  </div>
+</div>
+
+<section class="hero" id="hero">
+  <img id="heroImg" src="" alt="" style="display:none">
+  <div class="overlay" id="overlay"><h1>DOLLAR NONG</h1><div class="sub"><span class="zh">摄影作品展</span><span class="en">Photography Exhibition</span></div></div>
+</section>
+
+<nav class="tabs" id="tabs">
+  <button class="tab active" data-cat="all" onclick="sc('all')"><span class="zh">全部</span><span class="en">All</span> <span class="n" id="nAll">0</span></button>
+  <button class="tab" data-cat="portrait" onclick="sc('portrait')"><span class="zh">肖像</span><span class="en">Portrait</span> <span class="n" id="nPortrait">0</span></button>
+  <button class="tab" data-cat="performance" onclick="sc('performance')"><span class="zh">演出</span><span class="en">Performance</span> <span class="n" id="nPerformance">0</span></button>
+  <button class="tab" data-cat="food" onclick="sc('food')"><span class="zh">美食</span><span class="en">Food</span> <span class="n" id="nFood">0</span></button>
+</nav>
+
+<div class="grid" id="grid"><div class="loading-text"><span class="zh">加载作品中...</span><span class="en">Loading works...</span></div></div>
+
+<div class="footer">
+  <div class="ft"><span class="zh">联系</span><span class="en">Contact</span></div>
+  <div style="margin-bottom:4px">✉️ <a href="mailto:Dollarnong@gmail.com">Dollarnong@gmail.com</a></div>
+  <div>💬 WeChat: dollarnong2017</div>
+</div>
+
+<!-- Config bar (hidden normally, press ` key 3 times to show) -->
+<div class="config-bar hidden" id="cfgBar">
+  <span>API:</span>
+  <input id="cfgInput" placeholder="https://xxx.trycloudflare.com">
+  <button onclick="saveCfg()">Save</button>
+  <span class="hint" id="cfgStatus"></span>
+</div>
+
+<div class="lb" id="lb" onclick="cl()"><button class="c" onclick="cl(event)">✕</button><button class="n prev" onclick="nv(-1,event)">‹</button><img id="lbImg" src="" alt=""><button class="n next" onclick="nv(1,event)">›</button><div class="m" id="lbMeta"></div></div>
+
+<script>
+var I=[], cat='all', lg='zh', li=0, API='';
+var CATS={portrait:{zh:'肖像 · Portrait',en:'Portrait'},performance:{zh:'演出 · Performance',en:'Performance'},food:{zh:'美食 · Food',en:'Food'}};
+
+function t(z,e){return lg==='en'?e:z}
+function h(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function fD(ts){if(!ts)return'';var d=new Date(ts);return d.getFullYear()+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+String(d.getDate()).padStart(2,'0')}
+function cL(c){var x=CATS[c];return x?(lg==='en'?x.en:x.zh):c}
+
+// ─── API URL Management ───
+function getAPI(){
+  if(API)return API;
+  // Check localStorage
+  try{var v=localStorage.getItem('dollar_nong_api');if(v){API=v;return v}}catch(e){}
+  // Check URL param
+  var p=new URLSearchParams(location.search);var a=p.get('api');if(a){API=a;try{localStorage.setItem('dollar_nong_api',a)}catch(e){};return a}
+  return '';
+}
+
+function goAdmin(){
+  var api=getAPI();
+  if(api){window.open(api,'_blank')}
+  else{
+    var u=prompt(t('请输入管理后台地址：\n（例如 https://xxx.trycloudflare.com）','Enter admin URL:\n(e.g. https://xxx.trycloudflare.com)'));
+    if(u){API=u;try{localStorage.setItem('dollar_nong_api',u)}catch(e){};window.open(u,'_blank')}
+  }
+}
+
+// ─── Load data ───
+async function load(){
+  var api=getAPI();
+  if(!api){
+    document.getElementById('grid').innerHTML='<div class=error-text>'+t('请先设置 API 地址。<br>点击右上角「管理」输入管理后台网址。','Please set API URL first.<br>Click "Manage" to enter the admin URL.')+'</div>';
+    return;
+  }
+  try{
+    var r=await fetch(api+'/api/manifest');I=await r.json();I=I.map(function(x){x.category=x.category||'portrait';return x})
+  }catch(e){
+    document.getElementById('grid').innerHTML='<div class=error-text>'+t('无法连接服务器。<br>点击右上角「管理」更新地址。','Cannot connect.<br>Click "Manage" to update URL.')+'</div>';
+    return
+  }
+  refresh();
+}
+
+// ─── Render ───
+function rHero(){
+  var f=cat==='all'?I:I.filter(function(x){return x.category===cat});
+  var img=document.getElementById('heroImg');
+  if(f.length){img.src=getAPI()+f[0].dataUrl;img.style.display='block'}else{img.style.display='none'}
+}
+function rGrid(){
+  var g=document.getElementById('grid'),f=cat==='all'?I:I.filter(function(x){return x.category===cat});
+  if(f.length===0){g.innerHTML='<div class=empty>'+t('暂无作品','No works yet')+'</div>';return}
+  g.innerHTML=f.map(function(it){var idx=I.indexOf(it);
+    return '<div class=item><a href="javascript:void(0)" onclick="ol('+idx+')"><img src="'+getAPI()+h(it.dataUrl)+'" alt="'+h(it.name)+'" loading=lazy><div class=info><div class=title>'+h(it.name)+'</div><div class=cap>'+fD(it.ts)+' · '+cL(it.category)+'</div></div></a></div>';
+  }).join('');
+}
+function rCounts(){
+  var c=function(ct){return I.filter(function(x){return x.category===ct}).length};
+  document.getElementById('nAll').textContent=I.length;
+  document.getElementById('nPortrait').textContent=c('portrait');
+  document.getElementById('nPerformance').textContent=c('performance');
+  document.getElementById('nFood').textContent=c('food');
+  document.getElementById('cnt').innerHTML=I.length+' <span class=zh>作品</span><span class=en>Works</span>';
+}
+function sc(c){cat=c;document.querySelectorAll('.tab').forEach(function(el){el.classList.toggle('active',el.dataset.cat===c)});rHero();rGrid()}
+function refresh(){rCounts();rHero();rGrid()}
+
+// ─── Lightbox ───
+function ol(idx,e){if(e)e.stopPropagation();li=idx;var it=I[idx];document.getElementById('lbImg').src=getAPI()+it.dataUrl;document.getElementById('lbMeta').textContent=it.name+' · '+cL(it.category);document.getElementById('lb').classList.add('on');document.body.style.overflow='hidden'}
+function cl(e){if(e)e.stopPropagation();document.getElementById('lb').classList.remove('on');document.body.style.overflow=''}
+function nv(dir,e){if(e)e.stopPropagation();if(!I.length)return;li=(li+dir+I.length)%I.length;var it=I[li];document.getElementById('lbImg').src=getAPI()+it.dataUrl;document.getElementById('lbMeta').textContent=it.name+' · '+cL(it.category)}
+document.addEventListener('keydown',function(e){if(!document.getElementById('lb').classList.contains('on'))return;if(e.key==='Escape')cl();if(e.key==='ArrowLeft')nv(-1);if(e.key==='ArrowRight')nv(1)});
+
+// ─── Lang ───
+function tl(){lg=lg==='zh'?'en':'zh';document.body.classList.toggle('en',lg==='en');document.querySelector('.lang-btn').textContent=lg==='zh'?'EN':'中文';refresh()}
+
+// ─── Secret config bar ───
+var cfgClicks=0;
+document.addEventListener('keydown',function(e){if(e.key==='`'){cfgClicks++;if(cfgClicks>=3){document.getElementById('cfgBar').classList.remove('hidden');document.getElementById('cfgInput').value=getAPI()||'';cfgClicks=0}}else{cfgClicks=0}});
+function saveCfg(){var v=document.getElementById('cfgInput').value.trim();if(v){API=v;try{localStorage.setItem('dollar_nong_api',v)}catch(e){};document.getElementById('cfgStatus').textContent='✓';load()}else{document.getElementById('cfgStatus').textContent='Invalid'}}
+
+// ─── Boot ───
+load();
+</script>
+</body>
+</html>
