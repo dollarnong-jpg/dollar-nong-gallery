@@ -399,6 +399,11 @@ def build(cfg, quiet=False):
 # 发布
 # --------------------------------------------------------------------------
 
+def redact(text):
+    """把 URL 里的 token / 密码遮掉，别让它进日志。"""
+    return re.sub(r"//[^/@\s]+@", "//***@", str(text))
+
+
 def publish(cfg, message=None):
     build(cfg, quiet=True)
     info = repo_info(cfg)
@@ -418,7 +423,7 @@ def publish(cfg, message=None):
     if cfg.get("autoPush", True):
         code, out = run_cmd(["git", "push", cfg.get("gitRemote", "origin"), cfg.get("gitBranch", "main")], cwd=PROJECT)
         if out:
-            log("$ git push\n%s" % out)
+            log("$ git push\n%s" % redact(out))
         if code != 0:
             raise RuntimeError("推送失败，请检查网络或仓库权限：\n%s" % out)
         log("已推送到 %s / %s" % (info.get("remote", ""), cfg.get("gitBranch")))
