@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>摄影站管理台</title>
+<link rel="stylesheet" href="admin.css">
+</head>
+<body>
+<header class="top">
+  <div class="top-left">
+    <span class="dot" id="dot"></span>
+    <strong>摄影站管理台</strong>
+    <span class="path" id="contentPath"></span>
+  </div>
+  <div class="top-right">
+    <a class="btn ghost" id="previewBtn" href="/preview/index.html" target="_blank">预览网站</a>
+    <button class="btn ghost" id="buildBtn">生成</button>
+    <button class="btn primary" id="publishBtn">发布到线上</button>
+  </div>
+</header>
+
+<main class="layout">
+  <aside class="side">
+    <div class="side-head">
+      <span>相册</span>
+      <button class="mini" id="newAlbumBtn">+ 新建</button>
+    </div>
+    <ul class="album-list" id="albumList"></ul>
+    <div class="side-foot">
+      <button class="mini wide" id="siteBtn">站点信息与联系方式</button>
+      <button class="mini wide" id="configBtn">内容目录设置</button>
+    </div>
+  </aside>
+
+  <section class="body">
+    <div class="panel" id="dropzone">
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+      <p class="dz-main">把照片拖到这里，或 <button class="link" id="pickBtn">选择文件</button></p>
+      <p class="dz-sub" id="dzSub">先选中左侧相册，再拖入照片。原图留在内容目录，网站只上传压缩后的副本。</p>
+      <div class="progress" id="progressWrap" hidden><div class="bar" id="progressBar"></div><span id="progressTxt"></span></div>
+    </div>
+
+    <div class="album-edit" id="albumEdit" hidden>
+      <label>相册名字 <input id="fTitle" type="text"></label>
+      <label>英文标识 <input id="fSlug" type="text"></label>
+      <label>副标题 <input id="fSub" type="text"></label>
+      <label class="grow">简介 <input id="fDesc" type="text"></label>
+      <label class="chk"><input id="fHidden" type="checkbox"> 隐藏</label>
+      <button class="btn ghost" id="saveAlbumBtn">保存相册信息</button>
+      <button class="btn danger" id="delAlbumBtn">删除相册</button>
+    </div>
+
+    <div class="grid" id="photoGrid"></div>
+    <p class="hint" id="photoHint">选择左侧相册查看照片</p>
+  </section>
+
+  <aside class="logs">
+    <div class="side-head"><span>运行日志</span><button class="mini" id="clearLog">清空</button></div>
+    <pre id="log"></pre>
+  </aside>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box">
+    <h3 id="modalTitle"></h3>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-foot">
+      <button class="btn ghost" id="modalCancel">关闭</button>
+      <button class="btn primary" id="modalOk">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="admin.js"></script>
+</body>
+</html>

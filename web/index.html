@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DOLLAR NONG · 摄影作品</title>
+<meta name="description" content="人像 · 商业空间 · 美食 · 航拍 摄影作品集">
+<meta name="theme-color" content="#0c0c0d">
+<link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <a class="logo" href="#/" id="logo">DOLLAR NONG</a>
+  <nav class="nav-links">
+    <a href="#/" data-nav="works">作品</a>
+    <a href="#about" data-nav="about">关于</a>
+    <a href="#contact" data-nav="contact">联系</a>
+  </nav>
+</header>
+
+<main id="main">
+
+  <section class="hero" id="hero">
+    <div class="hero-slides" id="heroSlides"></div>
+    <div class="hero-veil"></div>
+    <div class="hero-inner">
+      <p class="hero-kicker" id="heroKicker">PHOTOGRAPHY</p>
+      <h1 class="hero-title" id="heroTitle">DOLLAR NONG</h1>
+      <p class="hero-sub" id="heroSub"></p>
+      <a class="hero-cta" href="#works" id="heroCta">查看作品</a>
+    </div>
+    <div class="scroll-hint" aria-hidden="true"><span></span></div>
+  </section>
+
+  <section class="section" id="works">
+    <div class="section-head">
+      <h2 class="section-title">作品集</h2>
+      <p class="section-desc" id="worksDesc">按主题分类的拍摄记录</p>
+    </div>
+    <div class="albums" id="albums"></div>
+  </section>
+
+  <section class="section about" id="about">
+    <div class="about-grid">
+      <div class="about-media" id="aboutMedia"></div>
+      <div class="about-text">
+        <h2 class="section-title">关于</h2>
+        <p class="about-body" id="aboutBody"></p>
+        <ul class="about-meta" id="aboutMeta"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section contact" id="contact">
+    <div class="contact-inner">
+      <h2 class="section-title">联系与约拍</h2>
+      <p class="contact-lead" id="contactLead">有拍摄需求，欢迎直接联系。</p>
+      <div class="contact-list" id="contactList"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="footer-inner">
+    <span id="footerTitle">DOLLAR NONG</span>
+    <span class="footer-note" id="footerNote"></span>
+  </div>
+</footer>
+
+<div class="album-view" id="albumView" aria-hidden="true">
+  <div class="album-bar">
+    <button class="icon-btn" id="albumBack" aria-label="返回">&#8592;</button>
+    <div class="album-titles">
+      <h2 id="albumTitle"></h2>
+      <p id="albumSub"></p>
+    </div>
+    <span class="album-count" id="albumCount"></span>
+  </div>
+  <div class="album-desc" id="albumDesc"></div>
+  <div class="album-scroll" id="albumScroll">
+    <div class="justified" id="albumGrid"></div>
+  </div>
+</div>
+
+<div class="lightbox" id="lightbox" aria-hidden="true">
+  <button class="lb-btn lb-close" id="lbClose" aria-label="关闭">&times;</button>
+  <button class="lb-btn lb-prev" id="lbPrev" aria-label="上一张">&#8249;</button>
+  <button class="lb-btn lb-next" id="lbNext" aria-label="下一张">&#8250;</button>
+  <div class="lb-stage" id="lbStage">
+    <img id="lbImg" alt="">
+  </div>
+  <div class="lb-bar">
+    <span id="lbCap"></span>
+    <span id="lbIdx"></span>
+  </div>
+  <div class="lb-thumbs" id="lbThumbs"></div>
+</div>
+
+<script src="data/albums.js" onerror="window.__ALBUMS_MISSING__=true"></script>
+<script src="assets/site.js"></script>
+</body>
+</html>

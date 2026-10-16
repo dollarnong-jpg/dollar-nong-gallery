@@ -1,0 +1,21 @@
+{
+  "slug": "portrait",
+  "title": "人像",
+  "subtitle": "PERSON",
+  "description": "自然光下的人像记录。",
+  "cover": "",
+  "orderSort": 100,
+  "hidden": false,
+  "order": [
+    "smoke-test.jpg",
+    "0L7A4109-编辑.jpg",
+    "0L7A5742.jpg",
+    "DJ-661.jpg",
+    "DJ-714.jpg",
+    "DJ-788.jpg",
+    "IMGL9317.jpg",
+    "IMGL9405.jpg",
+    "IMG_0907.jpg",
+    "smoke-test_1.jpg"
+  ]
+}

@@ -1,0 +1,10 @@
+.DS_Store
+*.part
+**/.cache/
+
+# 原图只留在本机或 NAS，不进仓库；只保留相册的配置文件
+content/albums/*/*
+!content/albums/*/_album.json
+
+# 本机路径配置因机器而异
+tools/photosite.config.json
