@@ -428,11 +428,19 @@ def publish(cfg, message=None):
         if code != 0 and "nothing to commit" not in out:
             raise RuntimeError("命令失败：%s\n%s" % (" ".join(step), out))
     if cfg.get("autoPush", True):
-        code, out = run_cmd(["git", "push", cfg.get("gitRemote", "origin"), cfg.get("gitBranch", "main")], cwd=PROJECT)
-        if out:
-            log("$ git push\n%s" % redact(out))
+        # 网络偶尔抽风，自动重试三次，省得手动再点一次「发布」
+        code, out = 1, ""
+        for attempt in range(1, 4):
+            code, out = run_cmd(["git", "push", cfg.get("gitRemote", "origin"), cfg.get("gitBranch", "main")], cwd=PROJECT)
+            if out:
+                log("$ git push（第 %d 次）\n%s" % (attempt, redact(out)))
+            if code == 0:
+                break
+            if attempt < 3:
+                log("推送失败，10 秒后自动重试…")
+                time.sleep(10)
         if code != 0:
-            raise RuntimeError("推送失败，请检查网络或仓库权限：\n%s" % out)
+            raise RuntimeError("推送失败（已自动重试 3 次），请检查网络或仓库权限：\n%s" % out)
         log("已推送到 %s / %s" % (redact(info.get("remote", "")), cfg.get("gitBranch")))
     return True
 
