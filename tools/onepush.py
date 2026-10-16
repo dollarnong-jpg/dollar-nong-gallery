@@ -187,10 +187,10 @@ def enable_pages(token, login, repo):
         status, data = api("GET", path, token)
         if data.get("build_type") == "workflow":
             ok("Pages 已经开好了（GitHub Actions 方式）")
-            return data.get("html_url")
+            return data.get("html_url"), True
         api("PUT", path, token, {"build_type": "workflow"})
         ok("已切换成 GitHub Actions 方式")
-        return data.get("html_url")
+        return data.get("html_url"), True
     except ApiError as exc:
         if exc.status == 404:
             pass
@@ -198,21 +198,21 @@ def enable_pages(token, login, repo):
             warn("自动开启失败（%s），需要你手动开一次：" % exc.body.get("message", exc.status))
             say("      仓库 → Settings → Pages → Source 选 GitHub Actions")
             say("      https://github.com/%s/%s/settings/pages" % (login, repo))
-            return None
+            return None, False
         else:
             raise
 
     try:
         status, data = api("POST", path, token, {"build_type": "workflow"})
         ok("Pages 已开启（GitHub Actions 方式）")
-        return data.get("html_url")
+        return data.get("html_url"), True
     except ApiError as exc:
         if exc.status == 409:
             ok("Pages 已经在运行了")
-            return None
+            return None, True
         warn("自动开启失败：%s" % exc.body.get("message", exc.status))
         say("      请手动开一次：https://github.com/%s/%s/settings/pages" % (login, repo))
-        return None
+        return None, False
 
 
 def wait_for_pages(token, login, repo, url, timeout=300):
@@ -235,11 +235,17 @@ def wait_for_pages(token, login, repo, url, timeout=300):
                 warn("GitHub 报告构建出错，去 Actions 页面看日志")
                 return url, False
         except ApiError as exc:
+            if exc.status in (401, 403):
+                warn("token 读不到 Pages 状态，跳过等待")
+                return url, False
             if exc.status != 404:
                 raise
             if last != "waiting":
                 say("  还没有部署记录，等 Actions 跑完…")
                 last = "waiting"
+        except RuntimeError as exc:
+            warn("检查状态时网络中断：%s" % exc)
+            return url, False
         time.sleep(10)
 
     warn("等了 %d 秒还没好，通常再等 1-2 分钟就行" % timeout)
@@ -295,9 +301,12 @@ def main():
     ensure_repo(token, login, args.repo, args.private)
     ensure_remote(login, args.repo)
     push(token, login, args.repo)
-    url = enable_pages(token, login, args.repo)
+    url, can_wait = enable_pages(token, login, args.repo)
     url = url or "https://%s.github.io/%s/" % (login, args.repo)
-    url, ready = wait_for_pages(token, login, args.repo, url)
+    if can_wait:
+        url, ready = wait_for_pages(token, login, args.repo, url)
+    else:
+        ready = False
 
     say("")
     say("=" * 60)
@@ -314,7 +323,8 @@ def main():
     say("")
 
 
-if __name__ == "__main__":
+def entry():
+    """命令行入口，负责把异常翻译成人看得懂的提示。"""
     try:
         main()
     except KeyboardInterrupt:
@@ -332,3 +342,7 @@ if __name__ == "__main__":
         say("")
         fail(str(exc))
         raise SystemExit(1)
+
+
+if __name__ == "__main__":
+    entry()
