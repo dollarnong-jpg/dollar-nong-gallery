@@ -121,10 +121,17 @@ def read_json(path, default=None):
 
 def write_json(path, data):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, ensure_ascii=False, indent=2)
-    os.replace(tmp, path)
+    tmp = "%s.%d.tmp" % (path, os.getpid())
+    for attempt in range(4):
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=2)
+        try:
+            os.replace(tmp, path)
+            return
+        except FileNotFoundError:
+            if attempt == 3:
+                raise
+            time.sleep(0.2)
 
 
 def slugify(name):
@@ -426,7 +433,7 @@ def publish(cfg, message=None):
             log("$ git push\n%s" % redact(out))
         if code != 0:
             raise RuntimeError("推送失败，请检查网络或仓库权限：\n%s" % out)
-        log("已推送到 %s / %s" % (info.get("remote", ""), cfg.get("gitBranch")))
+        log("已推送到 %s / %s" % (redact(info.get("remote", "")), cfg.get("gitBranch")))
     return True
 
 
