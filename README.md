@@ -1,5 +1,17 @@
 # DOLLAR NONG 摄影站
 
+## 已经上线了
+
+| | 网址 |
+| --- | --- |
+| **线上网站（公开）** | https://dollarnong-jpg.github.io/dollar-nong-gallery/ |
+| **管理台（只在这台电脑上）** | http://127.0.0.1:8765 |
+| 本机预览（只看网站） | http://127.0.0.1:8000 |
+
+线上站点由 GitHub Pages 托管，仓库是 `dollarnong-jpg/dollar-nong-gallery` 的 `main` 分支。管理台里点一次「发布到线上」，GitHub 会自动重新构建、大约 1 分钟生效。GitHub 授权已经配置完成，不用再输入验证码或 token。
+
+---
+
 一套可以直接用的个人摄影网站方案：**静态站点 + 本机管理台 + NAS 文件夹更新**。
 
 没有框架，没有 npm，不用装依赖。只用 macOS 自带的 `python3` 和 `sips`。
@@ -18,26 +30,13 @@
 
 管理台开着的时候，网站预览在 http://127.0.0.1:8765/preview/index.html
 
-## 一键发布怎么用
+## 日常怎么更新作品
 
-双击 `一键发布到 GitHub.command`，它会要一个 GitHub token。生成方法：
+1. 双击 `打开管理台.command`
+2. 浏览器里拖照片进去，改标题、排序、设封面
+3. 点「发布到线上」，等大约 1 分钟，刷新线上网站就能看到
 
-1. 打开 https://github.com/settings/tokens?type=beta → Generate new token
-2. Repository access 选 Only select repositories（或 All repositories）
-3. Permissions 里勾上 **Contents: Read and write** 和 **Pages: Read and write**
-4. 复制那串 `github_pat_...`，粘进脚本的提示里
-
-然后它会自动完成：
-
-- 校验 token、认出你的账号
-- 仓库不存在就创建（默认 `dollar-nong-gallery`）
-- 推送代码
-- 把 Pages 切成 GitHub Actions 方式
-- 轮询等它上线，最后打印网站地址
-
-token 只在内存里使用，不写进任何文件；推送用的是 git 的环境变量注入，不会留在 `.git/config`、也不会出现在进程参数里。
-
-发布成功后，以后更新作品就都在管理台里点「发布到线上」，不用再碰这个脚本。
+不需要再输任何验证码或 token——这台电脑上的 git 已经记住了授权，`一键发布到 GitHub.command` 只在「换电脑 / 换账号」时才需要用。
 
 ## 命令行方式
 
@@ -134,21 +133,18 @@ python3 tools/photosite.py init               # 初始化目录结构
 - hash 路由，GitHub Pages 子路径部署不会 404
 - 手机上单列自适应
 
-## 已验证的内容
+## 上线记录与验证
 
-在这台机器上实测通过：
+- 2026-10-16 22:23 真实发布成功：代码已推到 `dollarnong-jpg/dollar-nong-gallery` 的 `main` 分支
+- GitHub Actions「Deploy to GitHub Pages」构建通过，线上 `https://dollarnong-jpg.github.io/dollar-nong-gallery/` 返回 200
+- 首页、样式、脚本、缩略图逐项验证：全部 200
+- 线上数据里有 3 个相册：人像 8 张、美食 4 张、航拍 4 张（示例照片来自你原来的站，等你自己换掉）
+- 引擎构建、44 项 HTTP 接口测试、20 项发布脚本测试、JS 语法检查都通过
 
-- 引擎构建 3 个相册 / 16 张照片，无报错
-- 全部 HTTP 接口 44 项检查通过（静态资源、上传、改名、排序、封面、删除、构建、日志）
-- 一键发布脚本 20 项检查通过（正常发布、token 缺 Pages 权限、token 失效、仓库已存在）
-- `site.js`、`admin.js` 用 JavaScriptCore 做过语法检查，并用 DOM 桩跑通初始化流程
-- 无变化时增量重建约 2 秒；新增一张照片约 4 秒（不会重跑整册）
-
-**没有验证的**：实际浏览器里的渲染效果，以及真实 GitHub 账号下的发布流程——这台机器没有联网权限，发布脚本是用模拟的 GitHub API 跑通的，第一次真实发布会是它的首秀。这台机器上没有 Chrome / Chromium，浏览器自动化通道被安全审批服务故障挡住了。所以配色、间距、动画这些视觉细节请你**打开预览亲眼确认一下**，有不满意的地方告诉我改。
+**还没验证的**：这台机器上没法截图，浏览器里的实际视觉效果（配色、间距、动画）请你打开看一眼。有不满意的地方告诉我改。
 
 ## 下一步
 
-1. 打开预览看视觉效果，把想改的地方告诉我（配色、字体大小、栏目）
-2. 把 `content/albums/` 里的示例照片换成你自己的
-3. 按照 `docs/02-上线部署手册.md` 推到 GitHub
-4. 想接 NAS 就看 `docs/03-NAS-挂载文件夹自动更新.md`
+1. 打开 https://dollarnong-jpg.github.io/dollar-nong-gallery/ 看视觉效果，要改配色、字号、栏目就告诉我
+2. 把 `content/albums/` 里的示例照片换成你自己的（或用管理台拖进去）
+3. 想让 NAS 上的照片文件夹自动同步，看 `docs/03-NAS-挂载文件夹自动更新.md`

@@ -692,7 +692,16 @@ class Handler(BaseHTTPRequestHandler):
 def serve(cfg):
     Handler.cfg = cfg
     port = int(cfg.get("port") or 8765)
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    try:
+        httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    except OSError:
+        # 端口已经被占用，通常说明管理台已经在跑了，直接打开它
+        log("管理台已经在运行：http://127.0.0.1:%d" % port)
+        try:
+            subprocess.run(["open", "http://127.0.0.1:%d" % port], timeout=10)
+        except Exception:
+            pass
+        return
     log("管理台已启动：http://127.0.0.1:%d" % port)
     log("内容目录：%s" % cfg["content"])
     log("按 Ctrl+C 停止")
