@@ -6,30 +6,58 @@
 
 ---
 
-## 五分钟跑起来
+## 三个双击入口
+
+| 双击这个 | 作用 | 网址 |
+| --- | --- | --- |
+| `打开管理台.command` | 启动管理台并自动打开浏览器 | http://127.0.0.1:8765 |
+| `打开网站预览.command` | 只看网站本身 | http://127.0.0.1:8000 |
+| `一键发布到 GitHub.command` | 建仓库 + 推送 + 开 Pages + 等上线 | 发布结束会打印网址 |
+
+第一次打开可能被 macOS 拦一下（提示"无法验证开发者"）：**右键点它 → 打开 → 再点"打开"**，之后就不再问了。
+
+管理台开着的时候，网站预览在 http://127.0.0.1:8765/preview/index.html
+
+## 一键发布怎么用
+
+双击 `一键发布到 GitHub.command`，它会要一个 GitHub token。生成方法：
+
+1. 打开 https://github.com/settings/tokens?type=beta → Generate new token
+2. Repository access 选 Only select repositories（或 All repositories）
+3. Permissions 里勾上 **Contents: Read and write** 和 **Pages: Read and write**
+4. 复制那串 `github_pat_...`，粘进脚本的提示里
+
+然后它会自动完成：
+
+- 校验 token、认出你的账号
+- 仓库不存在就创建（默认 `dollar-nong-gallery`）
+- 推送代码
+- 把 Pages 切成 GitHub Actions 方式
+- 轮询等它上线，最后打印网站地址
+
+token 只在内存里使用，不写进任何文件；推送用的是 git 的环境变量注入，不会留在 `.git/config`、也不会出现在进程参数里。
+
+发布成功后，以后更新作品就都在管理台里点「发布到线上」，不用再碰这个脚本。
+
+## 命令行方式
+
+不想双击也可以：
 
 ```bash
 cd "<这个目录>"
-python3 tools/photosite.py build     # 生成网站
-python3 tools/photosite.py serve     # 打开管理台
+python3 tools/photosite.py serve        # 管理台
+python3 tools/onepush.py                # 一键发布
+python3 tools/onepush.py --dry-run      # 只看它打算做什么，不联网
 ```
-
-或者直接双击 `tools/摄影站管理台.command`。
-
-浏览器打开 `http://127.0.0.1:8765`，左上角点「预览网站」看成品。
-
-想只看网站不看管理台：
-
-```bash
-cd web && python3 -m http.server 8000
-```
-
----
 
 ## 目录结构
 
 ```
 dollar-nong-photo/
+├── 打开管理台.command              ← 双击：启动管理台
+├── 打开网站预览.command             ← 双击：只看网站
+├── 一键发布到 GitHub.command        ← 双击：建仓库 + 推送 + 上线
+│
 ├── content/                      ← 你放照片的地方（可以指向 NAS）
 │   ├── _site.json                站点名字、简介、联系方式
 │   ├── albums/
@@ -47,8 +75,9 @@ dollar-nong-photo/
 │
 ├── tools/
 │   ├── photosite.py              核心引擎（构建 / 管理台 / 发布 / 监听）
+│   ├── onepush.py                一键发布到 GitHub Pages
 │   ├── admin/                    管理台界面
-│   └── 摄影站管理台.command        双击启动
+│   └── 摄影站管理台.command        双击启动（和根目录那个等价）
 │
 ├── docs/
 │   ├── 01-两个旧站点的评测与选型.md
@@ -111,10 +140,11 @@ python3 tools/photosite.py init               # 初始化目录结构
 
 - 引擎构建 3 个相册 / 16 张照片，无报错
 - 全部 HTTP 接口 44 项检查通过（静态资源、上传、改名、排序、封面、删除、构建、日志）
+- 一键发布脚本 20 项检查通过（正常发布、token 缺 Pages 权限、token 失效、仓库已存在）
 - `site.js`、`admin.js` 用 JavaScriptCore 做过语法检查，并用 DOM 桩跑通初始化流程
 - 无变化时增量重建约 2 秒；新增一张照片约 4 秒（不会重跑整册）
 
-**没有验证的**：实际浏览器里的渲染效果。这台机器上没有 Chrome / Chromium，浏览器自动化通道被安全审批服务故障挡住了。所以配色、间距、动画这些视觉细节请你**打开预览亲眼确认一下**，有不满意的地方告诉我改。
+**没有验证的**：实际浏览器里的渲染效果，以及真实 GitHub 账号下的发布流程——这台机器没有联网权限，发布脚本是用模拟的 GitHub API 跑通的，第一次真实发布会是它的首秀。这台机器上没有 Chrome / Chromium，浏览器自动化通道被安全审批服务故障挡住了。所以配色、间距、动画这些视觉细节请你**打开预览亲眼确认一下**，有不满意的地方告诉我改。
 
 ## 下一步
 
