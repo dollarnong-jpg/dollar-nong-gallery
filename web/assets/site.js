@@ -223,6 +223,94 @@
     document.title = (SITE.title || 'DOLLAR NONG') + ' · 摄影作品';
   }
 
+  /* ------------------------------------------------------------------ 灯箱缩放 */
+  var LB_ZMAX = 5;
+  var lz = { k: 1, x: 0, y: 0, drag: null, pinch: null, tap: null, lastTap: 0, hinted: false };
+
+  function lbBox() {
+    var st = $('#lbStage');
+    if (!st) return null;
+    var cs = getComputedStyle(st);
+    var pl = parseFloat(cs.paddingLeft) || 0, pr = parseFloat(cs.paddingRight) || 0;
+    var pt = parseFloat(cs.paddingTop) || 0, pb = parseFloat(cs.paddingBottom) || 0;
+    var r = st.getBoundingClientRect();
+    var w = Math.max(0, st.clientWidth - pl - pr), h = Math.max(0, st.clientHeight - pt - pb);
+    return { cx: r.left + pl + w / 2, cy: r.top + pt + h / 2, w: w, h: h };
+  }
+
+  function clampLz() {
+    var box = lbBox(), img = $('#lbImg');
+    if (!box || !img) return;
+    var w = img.offsetWidth * lz.k, h = img.offsetHeight * lz.k;
+    var mx = Math.max(0, (w - box.w) / 2), my = Math.max(0, (h - box.h) / 2);
+    lz.x = Math.min(mx, Math.max(-mx, lz.x));
+    lz.y = Math.min(my, Math.max(-my, lz.y));
+  }
+
+  function paintLz() {
+    var img = $('#lbImg'), st = $('#lbStage');
+    if (!img || !st) return;
+    img.style.transform = (lz.k === 1 && !lz.x && !lz.y) ? '' :
+      'translate3d(' + lz.x.toFixed(1) + 'px,' + lz.y.toFixed(1) + 'px,0) scale(' + lz.k.toFixed(3) + ')';
+    st.classList.toggle('zoomed', lz.k > 1.01);
+    setText('#lbZoom', Math.round(lz.k * 100) + '%');
+    var zin = $('#lbZoomIn'), zout = $('#lbZoomOut');
+    if (zin) zin.disabled = lz.k >= LB_ZMAX - 0.001;
+    if (zout) zout.disabled = lz.k <= 1.001;
+  }
+
+  function setZoom(k, cx, cy, smooth) {
+    var box = lbBox();
+    if (!box) return;
+    k = Math.max(1, Math.min(LB_ZMAX, k));
+    var prev = lz.k;
+    if (Math.abs(k - prev) < 0.001) return;
+    cx = (cx == null) ? box.cx : cx;
+    cy = (cy == null) ? box.cy : cy;
+    var px = cx - box.cx, py = cy - box.cy;
+    lz.x = px - (px - lz.x) * (k / prev);
+    lz.y = py - (py - lz.y) * (k / prev);
+    lz.k = k;
+    if (k <= 1.001) { lz.k = 1; lz.x = 0; lz.y = 0; }
+    clampLz();
+    paintLz();
+    var st = $('#lbStage');
+    if (smooth && st) {
+      st.classList.add('smooth');
+      setTimeout(function () { st.classList.remove('smooth'); }, 220);
+    }
+  }
+
+  function resetZoom() {
+    lz.k = 1; lz.x = 0; lz.y = 0; lz.drag = null; lz.pinch = null;
+    var st = $('#lbStage'), img = $('#lbImg');
+    if (st) st.classList.remove('smooth', 'dragging', 'zoomed');
+    if (img) img.style.transform = '';
+    setText('#lbZoom', '100%');
+    var zin = $('#lbZoomIn'), zout = $('#lbZoomOut');
+    if (zin) zin.disabled = false;
+    if (zout) zout.disabled = true;
+  }
+
+  function actualZoom() {
+    var img = $('#lbImg');
+    if (!img || !img.offsetWidth) return 2;
+    return Math.max(2, Math.min(LB_ZMAX, img.naturalWidth / img.offsetWidth));
+  }
+
+  function toggleZoom(cx, cy) {
+    if (lz.k > 1.01) resetZoom(); else setZoom(actualZoom(), cx, cy, true);
+  }
+
+  function hintOnce() {
+    if (lz.hinted) return;
+    lz.hinted = true;
+    var h = $('#lbHint');
+    if (!h) return;
+    h.classList.add('show');
+    setTimeout(function () { h.classList.remove('show'); }, 3800);
+  }
+
   /* ------------------------------------------------------------------ 灯箱 */
   var lbList = [], lbIdx = 0;
 
@@ -234,6 +322,7 @@
     document.body.classList.add('locked');
     renderThumbs();
     show(lbIdx);
+    setTimeout(hintOnce, 400);
   }
 
   function closeLightbox() {
@@ -241,6 +330,7 @@
     $('#lightbox').setAttribute('aria-hidden', 'true');
     if (!$('#albumView').classList.contains('open')) document.body.classList.remove('locked');
     $('#lbImg').removeAttribute('src');
+    resetZoom(false);
   }
 
   function show(i) {
@@ -248,11 +338,12 @@
     lbIdx = (i + lbList.length) % lbList.length;
     var p = lbList[lbIdx];
     var img = $('#lbImg');
+    resetZoom(false);
     img.classList.remove('ready');
     img.onload = function () { img.classList.add('ready'); };
     img.src = p.src;
-    img.alt = p.title || '';
-    setText('#lbCap', p.title || '');
+    img.alt = p.caption || ((currentAlbum ? currentAlbum.title : '作品') + ' 第 ' + (lbIdx + 1) + ' 张');
+    setText('#lbCap', p.caption || '');
     setText('#lbIdx', (lbIdx + 1) + ' / ' + lbList.length);
     var thumbs = $('#lbThumbs').children;
     for (var k = 0; k < thumbs.length; k++) thumbs[k].classList.toggle('on', k === lbIdx);
@@ -319,7 +410,56 @@
   $('#lbClose').addEventListener('click', closeLightbox);
   $('#lbPrev').addEventListener('click', function () { show(lbIdx - 1); });
   $('#lbNext').addEventListener('click', function () { show(lbIdx + 1); });
-  $('#lbStage').addEventListener('click', function (e) { if (e.target.id === 'lbStage') closeLightbox(); });
+  $('#lbStage').addEventListener('click', function (e) {
+    if (lz.moved) { lz.moved = false; return; }
+    if (e.target.id === 'lbStage' && lz.k <= 1.01) closeLightbox();
+  });
+
+  /* ---- 缩放交互：按钮 / 滚轮 / 双击 / 拖动 / 双指 ---- */
+  $('#lbZoomIn').addEventListener('click', function (e) {
+    e.stopPropagation(); setZoom(lz.k * 1.4, null, null, true);
+  });
+  $('#lbZoomOut').addEventListener('click', function (e) {
+    e.stopPropagation(); setZoom(lz.k / 1.4, null, null, true);
+  });
+  $('#lbZoom').addEventListener('click', function (e) {
+    e.stopPropagation(); toggleZoom(null, null);
+  });
+
+  var lbSt = $('#lbStage');
+
+  lbSt.addEventListener('wheel', function (e) {
+    if (!$('#lightbox').classList.contains('open')) return;
+    e.preventDefault();
+    setZoom(lz.k * Math.exp(-e.deltaY * 0.0018), e.clientX, e.clientY, false);
+  }, { passive: false });
+
+  lbSt.addEventListener('dblclick', function (e) {
+    if (e.target.id !== 'lbImg') return;
+    e.preventDefault();
+    toggleZoom(e.clientX, e.clientY);
+  });
+
+  lbSt.addEventListener('mousedown', function (e) {
+    if (lz.k <= 1.01 || e.button !== 0) return;
+    lz.drag = { x: e.clientX, y: e.clientY, tx: lz.x, ty: lz.y };
+    lz.moved = false;
+    lbSt.classList.add('dragging');
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function (e) {
+    if (!lz.drag) return;
+    var dx = e.clientX - lz.drag.x, dy = e.clientY - lz.drag.y;
+    if (Math.abs(dx) + Math.abs(dy) > 4) lz.moved = true;
+    lz.x = lz.drag.tx + dx;
+    lz.y = lz.drag.ty + dy;
+    clampLz(); paintLz();
+  });
+  window.addEventListener('mouseup', function () {
+    if (!lz.drag) return;
+    lz.drag = null;
+    lbSt.classList.remove('dragging');
+  });
 
   document.addEventListener('keydown', function (e) {
     if (!$('#lightbox').classList.contains('open')) {
@@ -329,15 +469,64 @@
     if (e.key === 'Escape') closeLightbox();
     if (e.key === 'ArrowLeft') show(lbIdx - 1);
     if (e.key === 'ArrowRight') show(lbIdx + 1);
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); setZoom(lz.k * 1.4, null, null, true); }
+    if (e.key === '-' || e.key === '_') { e.preventDefault(); setZoom(lz.k / 1.4, null, null, true); }
+    if (e.key === '0') { e.preventDefault(); resetZoom(); }
   });
 
-  var touchX = null;
-  $('#lbStage').addEventListener('touchstart', function (e) { touchX = e.touches[0].clientX; }, { passive: true });
-  $('#lbStage').addEventListener('touchend', function (e) {
-    if (touchX == null) return;
-    var dx = e.changedTouches[0].clientX - touchX;
-    if (Math.abs(dx) > 55) show(lbIdx + (dx < 0 ? 1 : -1));
-    touchX = null;
+  /* 触屏：双指缩放 / 放大后拖动 / 双击放大 / 未放大时左右滑动换图 */
+  lbSt.addEventListener('touchstart', function (e) {
+    if (e.touches.length === 2) {
+      var a = e.touches[0], b = e.touches[1];
+      lz.pinch = { d: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY) || 1, k: lz.k };
+      lz.tap = null; lz.drag = null;
+      return;
+    }
+    if (e.touches.length !== 1) return;
+    var t = e.touches[0];
+    lz.pinch = null;
+    lz.tap = { x: t.clientX, y: t.clientY, time: Date.now(), moved: false };
+    if (lz.k > 1.01) {
+      lz.drag = { x: t.clientX, y: t.clientY, tx: lz.x, ty: lz.y };
+      lbSt.classList.add('dragging');
+    }
+  }, { passive: true });
+
+  lbSt.addEventListener('touchmove', function (e) {
+    if (e.touches.length === 2 && lz.pinch) {
+      e.preventDefault();
+      var a = e.touches[0], b = e.touches[1];
+      var d = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      setZoom(lz.pinch.k * (d / lz.pinch.d), (a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2, false);
+      return;
+    }
+    if (e.touches.length === 1 && lz.drag) {
+      e.preventDefault();
+      var t = e.touches[0];
+      var dx = t.clientX - lz.drag.x, dy = t.clientY - lz.drag.y;
+      if (Math.abs(dx) + Math.abs(dy) > 4 && lz.tap) lz.tap.moved = true;
+      lz.x = lz.drag.tx + dx;
+      lz.y = lz.drag.ty + dy;
+      clampLz(); paintLz();
+    }
+  }, { passive: false });
+
+  lbSt.addEventListener('touchend', function (e) {
+    var wasPinch = !!lz.pinch;
+    if (e.touches.length === 0) lz.pinch = null;
+    if (lz.drag) { lz.drag = null; lbSt.classList.remove('dragging'); }
+    if (!lz.tap) return;
+    var t = e.changedTouches[0];
+    var dx = t.clientX - lz.tap.x, dy = t.clientY - lz.tap.y;
+    var isTap = !lz.tap.moved && Math.abs(dx) < 8 && Math.abs(dy) < 8 && (Date.now() - lz.tap.time) < 320;
+    if (isTap && !wasPinch) {
+      var now = Date.now();
+      if (now - lz.lastTap < 320) { toggleZoom(t.clientX, t.clientY); lz.lastTap = 0; }
+      else { lz.lastTap = now; }
+    } else if (!wasPinch && lz.k <= 1.01 && Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy)) {
+      show(lbIdx + (dx < 0 ? 1 : -1));
+    }
+    lz.tap = null;
   }, { passive: true });
 
   window.addEventListener('hashchange', route);
