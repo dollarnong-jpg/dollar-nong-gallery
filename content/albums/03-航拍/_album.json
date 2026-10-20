@@ -1,8 +1,8 @@
 {
-  "slug": "aerial",
-  "title": "航拍",
-  "subtitle": "AERIAL",
-  "description": "城市与地貌的空中视角。",
+  "slug": "Live Events",
+  "title": "演出活动",
+  "subtitle": "Event & Performance",
+  "description": "现场灯光与人群情绪的记录。",
   "cover": "",
   "orderSort": 100,
   "hidden": false,
