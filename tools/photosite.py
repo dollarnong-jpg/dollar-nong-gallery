@@ -418,7 +418,8 @@ def publish(cfg, message=None):
         raise RuntimeError("这里还不是 git 仓库。先执行：git init && git remote add origin <你的仓库地址>")
     message = message or ("更新作品 " + time.strftime("%Y-%m-%d %H:%M"))
     steps = [
-        ["git", "add", "-A", "web"],
+        # web 是网站产物；content 是相册文案/排序/封面等源数据，必须一起提交
+        ["git", "add", "-A", "web", "content"],
         ["git", "commit", "-m", message],
     ]
     for step in steps:
