@@ -23,6 +23,16 @@ a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 ::selection{background:var(--accent);color:#111}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:2px}
+
+/* ---------- 通用按钮 ---------- */
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 26px;
+  border-radius:2px;font-size:12px;letter-spacing:.22em;border:1px solid transparent;
+  transition:background .35s var(--ease),color .35s var(--ease),border-color .35s var(--ease),transform .35s var(--ease)}
+.btn-primary{background:var(--accent);color:#141210;border-color:var(--accent)}
+.btn-primary:hover{background:#d9bb82;border-color:#d9bb82;transform:translateY(-1px)}
+.btn-ghost{border-color:rgba(255,255,255,.38);color:var(--text)}
+.btn-ghost:hover{background:var(--text);color:#0c0c0d;border-color:var(--text)}
 
 /* ---------- 导航 ---------- */
 .nav{
@@ -33,11 +43,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 }
 .nav.solid{background:rgba(12,12,13,.82);backdrop-filter:saturate(150%) blur(14px);padding:14px var(--pad);border-bottom:1px solid var(--line)}
 .logo{font-size:13px;letter-spacing:.34em;font-weight:600}
-.nav-links{display:flex;gap:clamp(16px,3vw,38px)}
-.nav-links a{font-size:13px;letter-spacing:.14em;color:var(--muted);position:relative;transition:color .3s}
+.nav-links{display:flex;align-items:center;gap:clamp(14px,2.4vw,32px)}
+.nav-links a{display:inline-flex;align-items:center;min-height:44px;font-size:13px;letter-spacing:.14em;color:var(--muted);position:relative;transition:color .3s}
 .nav-links a:hover{color:var(--text)}
 .nav-links a::after{content:"";position:absolute;left:0;right:100%;bottom:-6px;height:1px;background:var(--accent);transition:right .4s var(--ease)}
 .nav-links a:hover::after{right:0}
+.nav-cta{padding:0 16px;border:1px solid rgba(201,168,106,.5);border-radius:2px;color:var(--accent)}
+.nav-cta::after{display:none}
+.nav-cta:hover{background:var(--accent);color:#141210;border-color:var(--accent)}
 
 /* ---------- 首屏 ---------- */
 .hero{position:relative;height:100svh;min-height:560px;overflow:hidden;display:flex;align-items:center}
@@ -63,6 +76,11 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   transition:background .4s var(--ease),color .4s var(--ease),border-color .4s var(--ease);
 }
 .hero-cta:hover{background:var(--text);color:#0c0c0d;border-color:var(--text)}
+.hero-actions{display:flex;flex-wrap:wrap;gap:14px;margin-top:34px}
+.hero-stats{list-style:none;display:flex;flex-wrap:wrap;align-items:center;gap:0;margin:36px 0 0;padding:0;
+  font-size:12px;letter-spacing:.14em;color:rgba(236,235,231,.7);text-shadow:0 1px 14px rgba(6,6,7,.8)}
+.hero-stats li{display:flex;align-items:center}
+.hero-stats li + li{border-left:1px solid rgba(255,255,255,.26);margin-left:16px;padding-left:16px}
 .scroll-hint{position:absolute;left:50%;bottom:28px;z-index:2;width:1px;height:56px;background:rgba(255,255,255,.18);overflow:hidden}
 .scroll-hint span{position:absolute;inset:0;background:var(--text);animation:drop 2.4s var(--ease) infinite}
 @keyframes drop{0%{transform:translateY(-100%)}60%,100%{transform:translateY(100%)}}
@@ -96,7 +114,37 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .about-meta b{color:var(--text);font-weight:500;min-width:68px;letter-spacing:.08em}
 
 /* ---------- 联系 ---------- */
+/* ---------- 拍摄范围 ---------- */
+.services{border-top:1px solid var(--line)}
+.services-grid{max-width:1400px;margin:0 auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(14px,2vw,24px)}
+.service-card{position:relative;display:flex;flex-direction:column;gap:10px;padding:30px 26px 24px;
+  border:1px solid var(--line);border-radius:3px;min-height:250px;
+  background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0));
+  transition:border-color .4s var(--ease),background .4s var(--ease),transform .4s var(--ease)}
+.service-card:hover{border-color:rgba(201,168,106,.5);background:rgba(255,255,255,.045);transform:translateY(-3px)}
+.service-no{font-size:11px;letter-spacing:.22em;color:var(--accent)}
+.service-card h3{margin:0;font-family:var(--serif);font-weight:400;font-size:22px;letter-spacing:.05em}
+.service-en{margin:0;font-size:10px;letter-spacing:.24em;color:var(--muted)}
+.service-desc{margin:6px 0 auto;font-size:13.5px;line-height:1.95;color:var(--muted)}
+.service-more{font-size:12px;letter-spacing:.12em;color:rgba(236,235,231,.85);transition:color .3s}
+.service-card:hover .service-more{color:var(--accent)}
+
+/* ---------- 拍摄流程 ---------- */
+.process{border-top:1px solid var(--line);background:var(--bg-soft)}
+.steps{list-style:none;margin:0 auto;padding:0;max-width:1400px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(22px,4vw,54px)}
+.steps li{position:relative;padding-top:24px;border-top:1px solid var(--line)}
+.steps li::before{content:"";position:absolute;top:-1px;left:0;width:40px;height:1px;background:var(--accent)}
+.step-no{display:block;font-size:10px;letter-spacing:.26em;color:var(--accent);margin-bottom:12px}
+.steps h3{margin:0 0 8px;font-family:var(--serif);font-weight:400;font-size:19px;letter-spacing:.04em}
+.steps p{margin:0;font-size:13.5px;line-height:1.95;color:var(--muted)}
+
+/* ---------- 联系 ---------- */
 .contact{border-top:1px solid var(--line);background:var(--bg-soft)}
+.contact-item .copy{margin-left:12px;font-size:11px;letter-spacing:.16em;color:var(--muted);
+  border:1px solid var(--line);border-radius:2px;padding:6px 12px;min-height:32px;
+  transition:color .25s,border-color .25s,background .25s;vertical-align:middle}
+.contact-item .copy:hover{color:var(--text);border-color:rgba(255,255,255,.34);background:rgba(255,255,255,.05)}
+.contact-item .copy.done{color:var(--accent);border-color:var(--accent)}
 .contact-inner{max-width:1400px;margin:0 auto}
 .contact-lead{color:var(--muted);margin:16px 0 34px;font-size:14px}
 .contact-list{display:grid;gap:2px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
@@ -183,6 +231,10 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .reveal.in{opacity:1;transform:none}
 
 /* ---------- 响应式 ---------- */
+@media (max-width:1100px){
+  .services-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 @media (max-width:900px){
   .about-grid{grid-template-columns:1fr}
   .about-media{aspect-ratio:16/10;max-height:46vh}
@@ -194,6 +246,12 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
   .logo{font-size:11px;letter-spacing:.24em}
   .section{padding:70px 18px}
   .hero-cta{margin-top:26px;padding:11px 22px}
+  .hero-actions{margin-top:26px;gap:10px}
+  .hero-actions .btn{min-height:44px;padding:0 20px;flex:1 1 auto}
+  .hero-stats{margin-top:26px;font-size:11px;letter-spacing:.1em}
+  .services-grid,.steps{grid-template-columns:1fr}
+  .service-card{min-height:auto;padding:24px 22px}
+  .steps li{padding-top:20px}
   .lb-stage{padding:10px 8px 0}
   .lb-bar{padding:10px 14px 12px;gap:10px}
   .lb-prev,.lb-next{width:44px;height:44px;font-size:24px;top:auto;bottom:58px;transform:none;background:rgba(10,10,12,.5)}

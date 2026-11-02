@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dollarnong-jpg.github.io/dollar-nong-gallery/sitemap.xml

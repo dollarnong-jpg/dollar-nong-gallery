@@ -25,7 +25,7 @@
       if (m) m.setAttribute('content', SITE.intro);
     }
     setText('#logo', SITE.title || 'DOLLAR NONG');
-    setText('#heroKicker', (SITE.subtitle || 'PHOTOGRAPHY').split(/[·|,，]/)[0].trim().toUpperCase() || 'PHOTOGRAPHY');
+    setText('#heroKicker', (SITE.kicker || 'PHOTOGRAPHY').toUpperCase());
     setText('#heroTitle', SITE.titleCn || SITE.title || 'DOLLAR NONG');
     setText('#heroSub', SITE.intro || '');
     setText('#worksDesc', SITE.worksDesc || ('共 ' + ALBUMS.length + ' 个主题 · ' + (DATA.photoCount || 0) + ' 张作品'));
@@ -33,6 +33,14 @@
     setText('#contactLead', SITE.contactLead || '有拍摄需求，欢迎直接联系。');
     setText('#footerTitle', '© ' + new Date().getFullYear() + ' ' + (SITE.title || 'DOLLAR NONG'));
     setText('#footerNote', SITE.footerNote || '');
+
+    // 首屏数据条（来自真实数据，不写死）
+    var stats = [];
+    if (ALBUMS.length) stats.push(ALBUMS.length + ' 个主题');
+    if (DATA.photoCount) stats.push(DATA.photoCount + ' 张作品');
+    if (SITE.location) stats.push(SITE.location);
+    var st = $('#heroStats');
+    if (st) st.innerHTML = stats.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('');
 
     var meta = [];
     if (SITE.location) meta.push(['所在地', SITE.location]);
@@ -43,7 +51,7 @@
     }).join('');
 
     var contacts = [];
-    if (SITE.wechat) contacts.push(['微信', SITE.wechat, '']);
+    if (SITE.wechat) contacts.push(['微信', SITE.wechat, '', true]);
     if (SITE.phone) contacts.push(['电话', SITE.phone, 'tel:' + SITE.phone.replace(/\s/g, '')]);
     if (SITE.email) contacts.push(['邮箱', SITE.email, 'mailto:' + SITE.email]);
     if (SITE.xiaohongshu) contacts.push(['小红书', SITE.xiaohongshu, '']);
@@ -51,8 +59,28 @@
     $('#contactList').innerHTML = contacts.map(function (row) {
       var inner = '<strong>' + esc(row[1]) + '</strong>';
       if (row[2]) inner = '<a href="' + esc(row[2]) + '">' + inner + '</a>';
+      if (row[3]) inner += '<button class="copy" type="button" data-copy="' + esc(row[1]) + '">复制</button>';
       return '<div class="contact-item"><span>' + esc(row[0]) + '</span>' + inner + '</div>';
     }).join('');
+    $('#contactList').querySelectorAll('.copy').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var text = btn.dataset.copy;
+        var done = function () {
+          btn.textContent = '已复制'; btn.classList.add('done');
+          setTimeout(function () { btn.textContent = '复制'; btn.classList.remove('done'); }, 1800);
+        };
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text); done(); });
+        } else { fallbackCopy(text); done(); }
+      });
+    });
+    function fallbackCopy(text) {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+    }
     if (!contacts.length) {
       $('#contactList').innerHTML = '<div class="contact-item"><span>联系方式</span><strong>请在管理台里填写微信 / 电话 / 邮箱</strong></div>';
     }
@@ -117,7 +145,7 @@
     box.innerHTML = ALBUMS.map(function (a) {
       var cover = a.coverLqip ? 'style="background-image:url(' + a.coverLqip + ')"' : '';
       return '<article class="album-card reveal" data-slug="' + esc(a.slug) + '">' +
-        '<div class="cover" ' + cover + '><img alt="' + esc(a.title) + '" data-src="' + esc(a.cover) + '"></div>' +
+        '<div class="cover" ' + cover + '><img alt="' + esc(a.title) + '" loading="lazy" decoding="async" data-src="' + esc(a.cover) + '"></div>' +
         '<span class="num">' + (a.count || 0) + ' 张</span>' +
         '<div class="meta"><h3>' + esc(a.title) + '</h3><p>' + esc(a.subtitle || a.description || '') + '</p></div>' +
         '</article>';
