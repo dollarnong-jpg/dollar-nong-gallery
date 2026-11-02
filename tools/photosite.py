@@ -159,7 +159,8 @@ def find_images(folder, exts=IMAGE_EXT):
     if not os.path.isdir(folder):
         return items
     for entry in sorted(os.listdir(folder)):
-        if entry.startswith(".") or entry.startswith("_"):
+        # 只跳过隐藏文件和元数据；不能跳过 "_" 开头的照片（尼康默认命名就是 _DSC…）
+        if entry.startswith(".") or entry.lower() in ("_album.json",):
             continue
         full = os.path.join(folder, entry)
         if os.path.isfile(full) and os.path.splitext(entry)[1].lower() in exts:
