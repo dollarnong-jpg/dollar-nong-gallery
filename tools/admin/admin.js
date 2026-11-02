@@ -195,7 +195,63 @@
     };
   }
 
-  function closeModal() { $('#modal').hidden = true; }
+  function closeModal() {
+    $('#modal').hidden = true;
+    $('#modal').classList.remove('dupe');
+    $('#modalOk').textContent = '保存';
+    $('#modalOk').disabled = false;
+  }
+
+  /* ---------------------------------------------------------------- 查重 */
+  function scanDuplicates() {
+    var album = state.current;
+    busy(true);
+    var url = '/api/duplicates' + (album ? '?album=' + encodeURIComponent(album.slug) : '');
+    api(url, null, 'GET').then(function (d) {
+      busy(false);
+      if (!d.groups || !d.groups.length) {
+        toast('没有发现重复照片' + (album ? '（' + album.title + '）' : ''), 'ok');
+        return;
+      }
+      showDuplicateModal(d, album);
+    }).catch(function (e) { busy(false); toast(e.message, 'err'); });
+  }
+
+  function showDuplicateModal(d, album) {
+    var mb = 1048576;
+    var html = '<p class="dupe-sum">发现 <b>' + d.groups.length + '</b> 组重复，<b>' +
+      d.totalDuplicates + '</b> 张多余，合计约 <b>' + (d.totalBytes / mb).toFixed(1) + ' MB</b>。' +
+      '每组默认保留第一张，取消勾选即可保留。</p>';
+    d.groups.forEach(function (g) {
+      html += '<div class="dupe-group"><div class="dupe-keep">保留 <b>' + esc(g.keep) + '</b><span class="dupe-folder">' + esc(g.folder) + '</span></div>';
+      g.remove.forEach(function (f) {
+        html += '<label class="dupe-item"><input type="checkbox" checked value="' + esc(f) + '" data-folder="' + esc(g.folder) + '"><span>' + esc(f) + '</span></label>';
+      });
+      html += '</div>';
+    });
+    $('#modalTitle').textContent = '重复照片检查' + (album ? ' · ' + album.title : '');
+    $('#modalBody').innerHTML = html;
+    $('#modal').classList.add('dupe');
+    $('#modal').hidden = false;
+    $('#modalOk').textContent = '删除勾选的重复照片';
+    $('#modalOk').disabled = false;
+    $('#modalOk').onclick = function () {
+      var boxes = Array.prototype.slice.call(document.querySelectorAll('#modalBody input[type=checkbox]:checked'));
+      if (!boxes.length) { toast('没有勾选任何照片', 'err'); return; }
+      if (!confirm('确定删除 ' + boxes.length + ' 张重复照片？原图会从内容目录移除，且不可恢复。')) return;
+      $('#modalOk').disabled = true;
+      Promise.all(boxes.map(function (b) {
+        return api('/api/photo/delete', { folder: b.getAttribute('data-folder'), file: b.value });
+      })).then(function () {
+        closeModal();
+        toast('已删除 ' + boxes.length + ' 张重复照片。记得点「生成」和「发布到线上」', 'warn');
+        load();
+      }).catch(function (e) {
+        $('#modalOk').disabled = false;
+        toast(e.message, 'err');
+      });
+    };
+  }
 
   /* ---------------------------------------------------------------- 日志 */
   function pullLog() {
@@ -208,6 +264,7 @@
   }
 
   /* ---------------------------------------------------------------- 绑定 */
+  $('#dupeBtn').addEventListener('click', scanDuplicates);
   $('#pickBtn').addEventListener('click', function () { $('#fileInput').click(); });
   $('#dropzone').addEventListener('click', function (e) { if (e.target.id === 'dropzone' || e.target.className === 'dz-main') $('#fileInput').click(); });
   $('#fileInput').addEventListener('change', function () { uploadFiles(this.files); this.value = ''; });

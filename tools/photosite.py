@@ -166,6 +166,37 @@ def find_images(folder, exts=IMAGE_EXT):
     return items
 
 
+def find_duplicates(cfg, album=""):
+    """按内容哈希找出同一相册内的重复照片；每组保留文件名排序第一张。"""
+    cache_path = os.path.join(cfg["content"], ".cache", "hashes.json")
+    os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+    hashes = read_json(cache_path, {}) or {}
+    groups, total, total_bytes = [], 0, 0
+    for a in scan_albums(cfg):
+        if album and album not in (a["slug"], a["folder"], slugify(a["folder"])):
+            continue
+        by_hash = {}
+        for name in find_images(a["dir"]):
+            p = os.path.join(a["dir"], name)
+            try:
+                h = cached_hash(hashes, p)
+                size = os.path.getsize(p)
+            except OSError:
+                continue
+            by_hash.setdefault(h, []).append((name, size))
+        for h, items in by_hash.items():
+            if len(items) < 2:
+                continue
+            items.sort(key=lambda x: x[0])
+            keep, size = items[0]
+            remove = [n for n, _ in items[1:]]
+            groups.append({"folder": a["folder"], "hash": h, "keep": keep, "remove": remove, "size": size})
+            total += len(remove)
+            total_bytes += size * len(remove)
+    write_json(cache_path, hashes)
+    return {"ok": True, "groups": groups, "totalDuplicates": total, "totalBytes": total_bytes}
+
+
 def run_cmd(args, cwd=None):
     proc = subprocess.run(args, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     out = proc.stdout.decode("utf-8", "replace").strip()
@@ -632,6 +663,9 @@ class Handler(BaseHTTPRequestHandler):
             })
         if path == "/api/log":
             return self.send_json({"ok": True, "lines": tail_log()})
+        if path == "/api/duplicates":
+            album = (query.get("album") or [""])[0]
+            return self.send_json(find_duplicates(cfg, album))
         if path == "/api/thumb":
             album = (query.get("album") or [""])[0]
             name = (query.get("file") or [""])[0]
