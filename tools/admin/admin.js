@@ -139,12 +139,17 @@
     wrap.hidden = false;
     busy(true);
 
-    var done = 0;
+    var done = 0, added = 0, dups = [];
     var next = function () {
       if (!files.length) {
         busy(false);
         wrap.hidden = true;
-        toast('上传完成，共 ' + done + ' 张。记得点「生成」和「发布到线上」', 'ok');
+        var msg = '上传完成：新增 ' + added + ' 张';
+        if (dups.length) {
+          msg += '，跳过 ' + dups.length + ' 张重复（' + dups.slice(0, 3).join('、') + (dups.length > 3 ? ' 等' : '') + '）';
+        }
+        msg += '。记得点「生成」和「发布到线上」';
+        toast(msg, dups.length ? 'warn' : 'ok');
         return load();
       }
       var file = files.shift();
@@ -160,6 +165,8 @@
         try {
           var j = JSON.parse(xhr.responseText);
           if (!j.ok) toast(file.name + '：' + (j.error || '上传失败'), 'err');
+          else if (j.duplicate) dups.push(file.name);
+          else added++;
         } catch (err) { toast(file.name + '：上传失败', 'err'); }
         done++;
         next();

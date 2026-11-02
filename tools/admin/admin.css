@@ -84,6 +84,7 @@ input[type=text],input[type=email],input[type=tel],textarea{font:inherit}
 .toast[hidden]{display:none}
 .toast.ok{border-color:var(--ok);color:#bff0d2}
 .toast.err{border-color:var(--danger);color:#f3c4c1}
+.toast.warn{border-color:#c9a86a;color:#e8d3a8}
 
 @media (max-width:1080px){
   .layout{grid-template-columns:200px minmax(0,1fr)}

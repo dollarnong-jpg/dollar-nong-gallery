@@ -118,19 +118,31 @@
     }).join('');
 
     var slides = box.querySelectorAll('.hero-slide');
-    Array.prototype.forEach.call(slides, function (el, i) {
+    var loaded = {};
+    function loadSlide(i) {
+      if (!slides[i] || loaded[i]) return;
+      loaded[i] = true;
       var photo = pool[i];
       var img = new Image();
-      img.onload = function () { el.style.backgroundImage = 'url("' + photo.src + '")'; };
+      img.onload = function () { slides[i].style.backgroundImage = 'url("' + photo.src + '")'; };
       img.src = photo.src;
-    });
-
+    }
+    // 首屏只拉第一张大图，其余在后台分次预取，避免一次下载 4 张
+    loadSlide(0);
     if (slides.length > 1) {
       var idx = 0;
+      setTimeout(function () {
+        loadSlide(1);
+        setTimeout(function () { loadSlide(2); }, 3000);
+      }, 1800);
       setInterval(function () {
+        var next = (idx + 1) % slides.length;
+        loadSlide(next);
         slides[idx].classList.remove('on');
-        idx = (idx + 1) % slides.length;
+        idx = next;
         slides[idx].classList.add('on');
+        var after = (idx + 1) % slides.length;
+        setTimeout(function () { loadSlide(after); }, 2000);
       }, 6200);
     }
   }
@@ -195,9 +207,13 @@
         if (p.lqip) fig.style.backgroundImage = 'url(' + p.lqip + ')';
         fig.style.backgroundSize = 'cover';
         var img = document.createElement('img');
-        img.alt = p.title || '';
+        img.alt = p.caption || ((currentAlbum ? currentAlbum.title : '作品') + ' 第 ' + (photos.indexOf(p) + 1) + ' 张');
         img.loading = 'lazy';
         img.decoding = 'async';
+        if (p.thumbSm) {
+          img.srcset = p.thumbSm + ' 480w, ' + p.thumb + ' 900w';
+          img.sizes = Math.round(w) + 'px';
+        }
         img.onload = function () { img.classList.add('ready'); };
         img.src = p.thumb;
         fig.appendChild(img);
@@ -384,7 +400,7 @@
 
   function renderThumbs() {
     $('#lbThumbs').innerHTML = lbList.map(function (p, i) {
-      return '<img src="' + p.thumb + '" data-i="' + i + '" alt="">';
+      return '<img src="' + (p.thumbXs || p.thumbSm || p.thumb) + '" data-i="' + i + '" alt="" loading="lazy" decoding="async">';
     }).join('');
     $('#lbThumbs').querySelectorAll('img').forEach(function (t) {
       t.addEventListener('click', function () { show(parseInt(t.dataset.i, 10)); });

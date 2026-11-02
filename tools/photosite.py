@@ -40,6 +40,10 @@ DEFAULT_CONFIG = {
     "port": 8765,
     "thumbSize": 900,
     "thumbQuality": 72,
+    "thumbSmSize": 480,
+    "thumbSmQuality": 68,
+    "thumbXsSize": 160,
+    "thumbXsQuality": 62,
     "fullSize": 2048,
     "fullQuality": 82,
     "engine": "sips",
@@ -218,9 +222,58 @@ def make_derivative(cfg, src, dst, max_size, quality):
     return sips_convert(src, dst, max_size, quality, cfg.get("stripMetadata", True))
 
 
+def strip_jpeg_app(data):
+    """去掉 JPEG 的 APPn/COM 段（相机写入的缩略图与拍摄信息），只保留画图必需的分段。"""
+    if data[:2] != b"\xff\xd8":
+        return data
+    out = bytearray(b"\xff\xd8")
+    i, n = 2, len(data)
+    while i < n - 1:
+        if data[i] != 0xFF:
+            i += 1
+            continue
+        m = data[i + 1]
+        if m == 0xDA:
+            out += data[i:]
+            break
+        if m in (0xD8, 0x01) or 0xD0 <= m <= 0xD7:
+            i += 2
+            continue
+        length = (data[i + 2] << 8) | data[i + 3]
+        if 0xE0 <= m <= 0xEF or m == 0xFE:
+            i += 2 + length
+        else:
+            out += data[i:i + 2 + length]
+            i += 2 + length
+    return bytes(out)
+
+
+def file_sha256(path, bufsize=1024 * 1024):
+    """整文件 SHA-256，用于上传内容去重。"""
+    h = hashlib.sha256()
+    with open(path, "rb") as fh:
+        while True:
+            chunk = fh.read(bufsize)
+            if not chunk:
+                break
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def cached_hash(cache, path):
+    """按 路径+体积+修改时间 缓存哈希，避免每次上传都重算整库。"""
+    st = os.stat(path)
+    key = "%s|%d|%.0f" % (path, st.st_size, st.st_mtime)
+    digest = cache.get(key)
+    if not digest:
+        digest = file_sha256(path)
+        cache[key] = digest
+    return digest
+
+
 def make_lqip(cfg, src, cache):
     """生成内嵌的极小占位图，按 路径+修改时间 缓存，避免每次重建都重跑。"""
-    key = "%s|%.0f" % (src, os.path.getmtime(src))
+    key = "v2|%s|%.0f" % (src, os.path.getmtime(src))
     if key in cache:
         return cache[key]
     tmp = os.path.join(cfg["content"], ".cache", "_lqip.jpg")
@@ -228,7 +281,7 @@ def make_lqip(cfg, src, cache):
     try:
         make_derivative(cfg, src, tmp, 28, 40)
         with open(tmp, "rb") as fh:
-            data = fh.read()
+            data = strip_jpeg_app(fh.read())
         if len(data) <= 6000:
             value = "data:image/jpeg;base64," + base64.b64encode(data).decode("ascii")
     except Exception:
@@ -313,6 +366,10 @@ def build(cfg, quiet=False):
         out_dir = os.path.join(media_root, slug)
         thumb_dir = os.path.join(out_dir, "t")
         os.makedirs(thumb_dir, exist_ok=True)
+        thumb_sm_dir = os.path.join(thumb_dir, "sm")
+        thumb_xs_dir = os.path.join(thumb_dir, "xs")
+        os.makedirs(thumb_sm_dir, exist_ok=True)
+        os.makedirs(thumb_xs_dir, exist_ok=True)
 
         photos = []
         expected = set()
@@ -323,14 +380,21 @@ def build(cfg, quiet=False):
             base = "%s-%s.jpg" % (stem or "photo", digest)
             full_dst = os.path.join(out_dir, base)
             thumb_dst = os.path.join(thumb_dir, base)
+            thumb_sm_dst = os.path.join(thumb_sm_dir, base)
+            thumb_xs_dst = os.path.join(thumb_xs_dir, base)
             expected.add(base)
             try:
                 if not os.path.exists(full_dst) or os.path.getmtime(full_dst) < os.path.getmtime(src):
                     make_derivative(cfg, src, full_dst, cfg["fullSize"], cfg["fullQuality"])
-                    if os.path.exists(thumb_dst):
-                        os.remove(thumb_dst)
+                    for stale_path in (thumb_dst, thumb_sm_dst, thumb_xs_dst):
+                        if os.path.exists(stale_path):
+                            os.remove(stale_path)
                 if not os.path.exists(thumb_dst):
                     make_derivative(cfg, src, thumb_dst, cfg["thumbSize"], cfg["thumbQuality"])
+                if not os.path.exists(thumb_sm_dst):
+                    make_derivative(cfg, src, thumb_sm_dst, cfg["thumbSmSize"], cfg["thumbSmQuality"])
+                if not os.path.exists(thumb_xs_dst):
+                    make_derivative(cfg, src, thumb_xs_dst, cfg["thumbXsSize"], cfg["thumbXsQuality"])
                 w, h = image_size(thumb_dst)
             except Exception as exc:
                 log("跳过 %s: %s" % (filename, exc))
@@ -340,6 +404,8 @@ def build(cfg, quiet=False):
                 "file": filename,
                 "src": "media/%s/%s" % (quote(slug), base),
                 "thumb": "media/%s/t/%s" % (quote(slug), base),
+                "thumbSm": "media/%s/t/sm/%s" % (quote(slug), base),
+                "thumbXs": "media/%s/t/xs/%s" % (quote(slug), base),
                 "w": w,
                 "h": h,
                 "ratio": round(w / h, 4) if h else 1.0,
@@ -358,6 +424,11 @@ def build(cfg, quiet=False):
             p = os.path.join(thumb_dir, stale)
             if os.path.isfile(p) and stale.lower().endswith(".jpg") and stale not in expected:
                 os.remove(p)
+        for sub_dir in (thumb_sm_dir, thumb_xs_dir):
+            for stale in os.listdir(sub_dir):
+                p = os.path.join(sub_dir, stale)
+                if os.path.isfile(p) and stale.lower().endswith(".jpg") and stale not in expected:
+                    os.remove(p)
 
         if not photos:
             log("相册「%s」没有可用照片，已跳过" % album["title"])
@@ -419,7 +490,7 @@ def publish(cfg, message=None):
     message = message or ("更新作品 " + time.strftime("%Y-%m-%d %H:%M"))
     steps = [
         # web 是网站产物；content 是相册文案/排序/封面等源数据，必须一起提交
-        ["git", "add", "-A", "web", "content"],
+        ["git", "add", "-A", "web", "content", "tools"],
         ["git", "commit", "-m", message],
     ]
     for step in steps:
@@ -706,7 +777,40 @@ class Handler(BaseHTTPRequestHandler):
                     break
                 fh.write(chunk)
                 remaining -= len(chunk)
+        # —— 去重：同相册内按内容哈希判断（先比体积，只有体积相同才计算哈希）——
+        cache_path = os.path.join(cfg["content"], ".cache", "hashes.json")
+        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+        hashes = read_json(cache_path, {}) or {}
+        size = os.path.getsize(tmp)
+        candidates = []
+        for other in find_images(target_dir):
+            other_path = os.path.join(target_dir, other)
+            try:
+                if os.path.getsize(other_path) == size:
+                    candidates.append((other, other_path))
+            except OSError:
+                pass
+        dup_of = None
+        if candidates:
+            new_hash = file_sha256(tmp)
+            for other, other_path in candidates:
+                try:
+                    if cached_hash(hashes, other_path) == new_hash:
+                        dup_of = other
+                        break
+                except OSError:
+                    pass
+        if dup_of:
+            os.remove(tmp)
+            write_json(cache_path, hashes)
+            log("跳过重复：%s（与 %s 相同）" % (name, dup_of))
+            return self.send_json({"ok": True, "duplicate": True, "duplicateOf": dup_of})
         os.replace(tmp, final)
+        try:
+            cached_hash(hashes, final)
+            write_json(cache_path, hashes)
+        except OSError:
+            pass
         self.send_json({"ok": True, "saved": os.path.basename(final), "size": length})
 
 
