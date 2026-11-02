@@ -21,6 +21,7 @@ import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
 import threading
@@ -279,6 +280,16 @@ def strip_jpeg_app(data):
     return bytes(out)
 
 
+def port_open(host, port, timeout=0.3):
+    """探测本机端口是否在监听（用于判断是否走代理推送）。"""
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(timeout)
+    try:
+        return s.connect_ex((host, port)) == 0
+    finally:
+        s.close()
+
+
 def file_sha256(path, bufsize=1024 * 1024):
     """整文件 SHA-256，用于上传内容去重。"""
     h = hashlib.sha256()
@@ -532,16 +543,30 @@ def publish(cfg, message=None):
             raise RuntimeError("命令失败：%s\n%s" % (" ".join(step), out))
     if cfg.get("autoPush", True):
         # 网络偶尔抽风，自动重试三次，省得手动再点一次「发布」
+        remote = cfg.get("gitRemote", "origin")
+        branch = cfg.get("gitBranch", "main")
+        proxies = []
+        for p in (7890, 1087, 8080):
+            if port_open("127.0.0.1", p):
+                proxies.append("http://127.0.0.1:%d" % p)
+                break
+        proxies.append(None)  # 代理不可用时直连兜底
         code, out = 1, ""
-        for attempt in range(1, 4):
-            code, out = run_cmd(["git", "push", cfg.get("gitRemote", "origin"), cfg.get("gitBranch", "main")], cwd=PROJECT)
-            if out:
-                log("$ git push（第 %d 次）\n%s" % (attempt, redact(out)))
+        tries = 0
+        for proxy in proxies:
+            for attempt in range(1, 3):
+                tries += 1
+                cmd = ["git"] + (["-c", "http.proxy=" + proxy] if proxy else []) + ["push", remote, branch]
+                code, out = run_cmd(cmd, cwd=PROJECT)
+                if out:
+                    log("$ git push（第 %d 次%s）\n%s" % (tries, "，走代理" if proxy else "，直连", redact(out)))
+                if code == 0:
+                    break
+                if attempt < 2:
+                    log("推送失败，10 秒后重试…")
+                    time.sleep(10)
             if code == 0:
                 break
-            if attempt < 3:
-                log("推送失败，10 秒后自动重试…")
-                time.sleep(10)
         if code != 0:
             raise RuntimeError("推送失败（已自动重试 3 次），请检查网络或仓库权限：\n%s" % out)
         log("已推送到 %s / %s" % (redact(info.get("remote", "")), cfg.get("gitBranch")))
