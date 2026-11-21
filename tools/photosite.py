@@ -392,6 +392,25 @@ def repo_info(cfg):
 # 构建
 # --------------------------------------------------------------------------
 
+def stamp_index(web, version):
+    """给静态资源写入本次构建版本号，避免浏览器继续使用旧脚本。"""
+    path = os.path.join(web, "index.html")
+    if not os.path.exists(path):
+        return
+    with open(path, "r", encoding="utf-8") as fh:
+        html = fh.read()
+    stamp = re.sub(r"\D", "", str(version)) or str(int(time.time()))
+    html = re.sub(
+        r'(<script\s+defer\s+src="(?:data/albums\.js|assets/site\.js))(?:\?v=[^"]*)?(")',
+        lambda m: m.group(1) + "?v=" + stamp + m.group(2),
+        html,
+    )
+    tmp = path + ".%d.tmp" % os.getpid()
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(html)
+    os.replace(tmp, path)
+
+
 def _build(cfg, quiet=False):
     t0 = time.time()
     site = dict(DEFAULT_SITE)
@@ -518,6 +537,7 @@ def _build(cfg, quiet=False):
         fh.write(";\n")
     with open(os.path.join(web, ".nojekyll"), "w", encoding="utf-8") as fh:
         fh.write("")
+    stamp_index(web, payload["generated"])
 
     log("构建完成：%d 个相册 / %d 张照片，用时 %.1fs" % (len(out_albums), total, time.time() - t0))
     return payload
