@@ -3,8 +3,11 @@
   "title": "演出活动",
   "subtitle": "Event & Performance",
   "description": "现场灯光与人群情绪的记录。",
-  "cover": "",
+  "cover": "幻灯片5.png",
   "orderSort": 100,
   "hidden": false,
-  "order": []
+  "order": [],
+  "featured": [
+    "幻灯片6.png"
+  ]
 }

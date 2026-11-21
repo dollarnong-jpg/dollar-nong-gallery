@@ -3,8 +3,11 @@
   "title": "美食摄影",
   "subtitle": "Food Photography",
   "description": "餐饮与商业出品拍摄。",
-  "cover": "",
+  "cover": "NIKON CORPORATION NIKON Z 6_2 (002686746376).jpg",
   "orderSort": 100,
   "hidden": false,
-  "order": []
+  "order": [],
+  "featured": [
+    "3.17美时邦0178 1.jpg"
+  ]
 }

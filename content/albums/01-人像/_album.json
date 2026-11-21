@@ -3,7 +3,7 @@
   "title": "人像摄影",
   "subtitle": "Portrait Photography",
   "description": "自然光下的人像记录。",
-  "cover": "",
+  "cover": "IMGL9317.jpg",
   "orderSort": 100,
   "hidden": false,
   "order": [
@@ -18,5 +18,7 @@
     "IMG_0907.jpg",
     "smoke-test_1.jpg"
   ],
-  "featured": []
+  "featured": [
+    "DJ-714.jpg"
+  ]
 }
