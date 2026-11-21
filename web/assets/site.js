@@ -187,7 +187,11 @@
 
   /* ------------------------------------------------------------------ 关于图 */
   function renderAboutMedia() {
-    if (ALBUMS.length) bg($('#aboutMedia'), ALBUMS[0].photos[Math.min(1, ALBUMS[0].photos.length - 1)]);
+    if (DATA.aboutPhoto) {
+      bg($('#aboutMedia'), DATA.aboutPhoto);
+    } else if (ALBUMS.length && ALBUMS[0].photos.length) {
+      bg($('#aboutMedia'), ALBUMS[0].photos[Math.min(1, ALBUMS[0].photos.length - 1)]);
+    }
   }
 
   /* ------------------------------------------------------------------ 刚好布局 */

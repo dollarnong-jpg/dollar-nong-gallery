@@ -515,6 +515,7 @@ def _build(cfg, quiet=False):
                 cover = photos[0]["src"]
 
         out_albums.append({
+            "folder": album["folder"],
             "slug": slug,
             "title": album["title"],
             "subtitle": album["subtitle"],
@@ -527,9 +528,22 @@ def _build(cfg, quiet=False):
             "photos": photos,
         })
 
+    about_photo = None
+    about_ref = site.get("aboutPhoto") or {}
+    if isinstance(about_ref, dict):
+        for album in out_albums:
+            if album.get("folder") != about_ref.get("album"):
+                continue
+            about_photo = next((p for p in album["photos"] if p["file"] == about_ref.get("file")), None)
+            if about_photo:
+                break
+    if not about_photo and out_albums and out_albums[0]["photos"]:
+        about_photo = out_albums[0]["photos"][min(1, len(out_albums[0]["photos"]) - 1)]
+
     payload = {
         "site": site,
         "albums": out_albums,
+        "aboutPhoto": about_photo,
         "generated": time.strftime("%Y-%m-%d %H:%M:%S"),
         "photoCount": total,
     }
@@ -942,6 +956,21 @@ class Handler(BaseHTTPRequestHandler):
             meta["order"] = data.get("order") or []
             write_json(meta_path, meta)
             return self.send_json({"ok": True})
+
+        if path == "/api/photo/about":
+            folder = safe_name(data.get("folder") or "")
+            name = safe_name(data.get("file") or "")
+            if not os.path.isfile(os.path.join(albums_dir, folder, name)):
+                raise RuntimeError("照片不存在：%s" % name)
+            site_path = os.path.join(content, "_site.json")
+            site = read_json(site_path, {}) or {}
+            current = site.get("aboutPhoto") or {}
+            if bool(data.get("enabled")):
+                site["aboutPhoto"] = {"album": folder, "file": name}
+            elif current.get("album") == folder and current.get("file") == name:
+                site.pop("aboutPhoto", None)
+            write_json(site_path, site)
+            return self.send_json({"ok": True, "aboutPhoto": site.get("aboutPhoto")})
 
         if path == "/api/build":
             job_id = start_job("build", lambda jid: run_build_job(cfg, jid))

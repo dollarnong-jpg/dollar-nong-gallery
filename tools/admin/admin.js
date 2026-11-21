@@ -163,14 +163,18 @@
     $('#photoGrid').innerHTML = files.map(function (f, i) {
       var isCover = a.cover === f;
       var isHome = (a.featured || []).indexOf(f) >= 0;
+      var about = state.site.aboutPhoto || {};
+      var isAbout = about.album === a.folder && about.file === f;
       var badges = [];
       if (isCover) badges.push('相册封面');
       if (isHome) badges.push('首页展示');
-      return '<div class="card' + (isCover ? ' cover' : '') + (isHome ? ' home' : '') + '" draggable="true" data-file="' + esc(f) + '" data-i="' + i + '">' +
+      if (isAbout) badges.push('关于图片');
+      return '<div class="card' + (isCover ? ' cover' : '') + (isHome ? ' home' : '') + (isAbout ? ' about-pic' : '') + '" draggable="true" data-file="' + esc(f) + '" data-i="' + i + '">' +
         (badges.length ? '<span class="badge">' + badges.join(' · ') + '</span>' : '') +
         '<img src="/api/thumb?album=' + encodeURIComponent(a.slug) + '&file=' + encodeURIComponent(f) + '" alt="" loading="lazy">' +
         '<span class="name">' + esc(f) + '</span>' +
         '<span class="acts">' +
+          '<button data-act="about" class="' + (isAbout ? 'on' : '') + '" title="' + (isAbout ? '取消关于图片' : '设为关于区域图片') + '">关</button>' +
           '<button data-act="home" class="' + (isHome ? 'on' : '') + '" title="' + (isHome ? '取消首页展示' : '加入首页轮播') + '">首</button>' +
           '<button data-act="cover" title="设为相册封面">★</button>' +
           '<button data-act="del" title="删除">✕</button>' +
@@ -182,6 +186,7 @@
       card.querySelectorAll('button').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
+          if (btn.dataset.act === 'about') return toggleAbout(card.dataset.file);
           if (btn.dataset.act === 'home') return toggleHome(card.dataset.file);
           if (btn.dataset.act === 'cover') return setCover(card.dataset.file);
           if (btn.dataset.act === 'del') return delPhoto(card.dataset.file);
@@ -211,6 +216,15 @@
     var enabled = (a.featured || []).indexOf(file) < 0;
     api('/api/photo/feature', { folder: a.folder, file: file, featured: enabled }).then(load).then(function () {
       toast(enabled ? '已加入首页轮播' : '已取消首页展示', 'ok');
+    });
+  }
+
+  function toggleAbout(file) {
+    var a = state.current;
+    var about = state.site.aboutPhoto || {};
+    var enabled = !(about.album === a.folder && about.file === file);
+    api('/api/photo/about', { folder: a.folder, file: file, enabled: enabled }).then(load).then(function () {
+      toast(enabled ? '已设为「关于」区域图片' : '已恢复自动选择关于图片', 'ok');
     });
   }
 

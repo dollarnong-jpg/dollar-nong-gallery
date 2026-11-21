@@ -15,10 +15,15 @@
     "location": "广西 · 南宁",
     "services": "人像写真 / 美食 / 航拍 / 活动记录",
     "gear": "",
-    "xiaohongshu": ""
+    "xiaohongshu": "",
+    "aboutPhoto": {
+      "album": "01-人像",
+      "file": "0L7A5742.jpg"
+    }
   },
   "albums": [
     {
+      "folder": "01-人像",
       "slug": "Portrait Shoot",
       "title": "人像摄影",
       "subtitle": "Portrait Photography",
@@ -832,6 +837,7 @@
       ]
     },
     {
+      "folder": "02-美食",
       "slug": "Food Shoot",
       "title": "美食摄影",
       "subtitle": "Food Photography",
@@ -3423,6 +3429,7 @@
       ]
     },
     {
+      "folder": "03-演出活动",
       "slug": "Live Events",
       "title": "演出活动",
       "subtitle": "Event & Performance",
@@ -4264,6 +4271,7 @@
       ]
     },
     {
+      "folder": "04-航拍摄影",
       "slug": "航拍摄影",
       "title": "航拍摄影",
       "subtitle": "Aerial Photography",
@@ -4601,6 +4609,20 @@
       ]
     }
   ],
-  "generated": "2026-11-22 00:08:36",
+  "aboutPhoto": {
+    "file": "0L7A5742.jpg",
+    "src": "media/Portrait%20Shoot/0L7A5742-bfe49e.jpg",
+    "thumb": "media/Portrait%20Shoot/t/0L7A5742-bfe49e.jpg",
+    "thumbSm": "media/Portrait%20Shoot/t/sm/0L7A5742-bfe49e.jpg",
+    "thumbXs": "media/Portrait%20Shoot/t/xs/0L7A5742-bfe49e.jpg",
+    "w": 600,
+    "h": 900,
+    "ratio": 0.6667,
+    "title": "0L7A5742",
+    "featured": false,
+    "v": "422583-1793674189",
+    "lqip": "data:image/jpeg;base64,/9j/wAARCAAcABIDASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9sAQwAJCQkJCQkQCQkQFhAQEBYeFhYWFh4mHh4eHh4mLiYmJiYmJi4uLi4uLi4uNzc3Nzc3QEBAQEBISEhISEhISEhI/9sAQwELDAwSERIfEREfSzMqM0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tL/90ABAAC/9oADAMBAAIRAxEAPwD163tIoUCIMAVJJbI6kMMg0XMy21nJOTt2ITn04rI8M6jNqOnb7lzJIrEFiAODyOlIlzV1FvVlB/D1uWJ9TTf+Edt66sgZowKZR//Q9I1u4D6HcGP5socYrM8EnbpTSngO3H4DFcPY3l3LGYXlfaRjGT/Wq1lquowWQgimYKrMB+dFupnKknNT7HsTahbhiC44pv8AaNt/fFeGNqV/uP75utJ/aV//AM9moNbH/9k="
+  },
+  "generated": "2026-11-22 00:17:23",
   "photoCount": 323
 }
