@@ -110,11 +110,18 @@
 
   /* ------------------------------------------------------------------ 首屏轮播 */
   function renderHero() {
-    var pool = [];
+    var picked = [];
     ALBUMS.forEach(function (a) {
-      a.photos.slice(0, 3).forEach(function (p) { pool.push(p); });
+      a.photos.forEach(function (p) { if (p.featured) picked.push(p); });
     });
-    pool = pool.filter(function (p, i) { return i % 3 === 0; }).slice(0, 6);
+
+    var pool = picked.slice(0, 12);
+    if (!pool.length) {
+      ALBUMS.forEach(function (a) {
+        a.photos.slice(0, 3).forEach(function (p) { pool.push(p); });
+      });
+      pool = pool.filter(function (p, i) { return i % 3 === 0; }).slice(0, 6);
+    }
     if (!pool.length) return;
 
     var box = $('#heroSlides');

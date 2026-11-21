@@ -162,11 +162,19 @@
     }
     $('#photoGrid').innerHTML = files.map(function (f, i) {
       var isCover = a.cover === f;
-      return '<div class="card' + (isCover ? ' cover' : '') + '" draggable="true" data-file="' + esc(f) + '" data-i="' + i + '">' +
-        (isCover ? '<span class="badge">封面</span>' : '') +
+      var isHome = (a.featured || []).indexOf(f) >= 0;
+      var badges = [];
+      if (isCover) badges.push('相册封面');
+      if (isHome) badges.push('首页展示');
+      return '<div class="card' + (isCover ? ' cover' : '') + (isHome ? ' home' : '') + '" draggable="true" data-file="' + esc(f) + '" data-i="' + i + '">' +
+        (badges.length ? '<span class="badge">' + badges.join(' · ') + '</span>' : '') +
         '<img src="/api/thumb?album=' + encodeURIComponent(a.slug) + '&file=' + encodeURIComponent(f) + '" alt="" loading="lazy">' +
         '<span class="name">' + esc(f) + '</span>' +
-        '<span class="acts"><button data-act="cover" title="设为封面">★</button><button data-act="del" title="删除">✕</button></span>' +
+        '<span class="acts">' +
+          '<button data-act="home" class="' + (isHome ? 'on' : '') + '" title="' + (isHome ? '取消首页展示' : '加入首页轮播') + '">首</button>' +
+          '<button data-act="cover" title="设为相册封面">★</button>' +
+          '<button data-act="del" title="删除">✕</button>' +
+        '</span>' +
         '</div>';
     }).join('');
 
@@ -174,6 +182,7 @@
       card.querySelectorAll('button').forEach(function (btn) {
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
+          if (btn.dataset.act === 'home') return toggleHome(card.dataset.file);
           if (btn.dataset.act === 'cover') return setCover(card.dataset.file);
           if (btn.dataset.act === 'del') return delPhoto(card.dataset.file);
         });
@@ -195,6 +204,14 @@
 
   function setCover(file) {
     api('/api/album/update', { folder: state.current.folder, cover: file }).then(load).then(function () { toast('封面已设置', 'ok'); });
+  }
+
+  function toggleHome(file) {
+    var a = state.current;
+    var enabled = (a.featured || []).indexOf(file) < 0;
+    api('/api/photo/feature', { folder: a.folder, file: file, featured: enabled }).then(load).then(function () {
+      toast(enabled ? '已加入首页轮播' : '已取消首页展示', 'ok');
+    });
   }
 
   function delPhoto(file) {

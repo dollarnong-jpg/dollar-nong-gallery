@@ -64,12 +64,16 @@ input[type=text],input[type=email],input[type=tel],textarea{font:inherit}
 .card{position:relative;border-radius:8px;overflow:hidden;background:var(--panel2);border:1px solid var(--line);aspect-ratio:1}
 .card img{width:100%;height:100%;object-fit:cover;display:block}
 .card .name{position:absolute;left:0;right:0;bottom:0;padding:5px 7px;font-size:10px;background:linear-gradient(transparent,rgba(0,0,0,.85));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.card .acts{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:0;transition:.2s}
+.card .acts{position:absolute;top:6px;right:6px;display:flex;gap:4px;opacity:.78;transition:.2s}
 .card:hover .acts{opacity:1}
 .card .acts button{background:rgba(0,0,0,.72);border:0;border-radius:4px;width:24px;height:24px;font-size:12px;color:#fff}
-.card .acts button:hover{background:var(--danger)}
+.card .acts button:hover{background:#3a3e46}
+.card .acts button[data-act="del"]:hover{background:var(--danger)}
+.card .acts button.on{background:#3f7898;color:#fff}
 .card.cover{border-color:var(--accent)}
+.card.home{box-shadow:inset 0 0 0 1px #6fa9ca}
 .card .badge{position:absolute;top:6px;left:6px;background:var(--accent);color:#141414;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:600}
+.album-tip{margin-left:auto;padding-bottom:9px;color:#7f8792;font-size:11px;white-space:nowrap}
 .hint{color:var(--muted);font-size:12px;text-align:center;padding:40px 0}
 
 .logs pre{margin:0;padding:12px;overflow:auto;flex:1;font:11px/1.6 ui-monospace,Menlo,monospace;color:#9fe0b5;white-space:pre-wrap;word-break:break-all}

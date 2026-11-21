@@ -364,6 +364,7 @@ def scan_albums(cfg):
             "description": meta.get("description", ""),
             "order": meta.get("orderSort", 100),
             "cover": meta.get("cover", ""),
+            "featured": meta.get("featured") or [],
             "hidden": bool(meta.get("hidden", False)),
             "files": files,
             "metaPath": os.path.join(full, "_album.json"),
@@ -438,6 +439,7 @@ def _build(cfg, quiet=False):
         os.makedirs(thumb_xs_dir, exist_ok=True)
 
         photos = []
+        featured = set(album.get("featured") or [])
         expected = set()
         for filename in album["files"]:
             src = os.path.join(album["dir"], filename)
@@ -477,6 +479,7 @@ def _build(cfg, quiet=False):
                 "h": h,
                 "ratio": round(w / h, 4) if h else 1.0,
                 "title": os.path.splitext(filename)[0],
+                "featured": filename in featured,
                 "v": version,
                 "lqip": make_lqip(cfg, src, lqip_cache),
             })
@@ -519,6 +522,7 @@ def _build(cfg, quiet=False):
             "cover": cover,
             "coverV": next((p["v"] for p in photos if p["src"] == cover), photos[0]["v"]),
             "coverLqip": next((p["lqip"] for p in photos if p["src"] == cover), photos[0]["lqip"]),
+            "featured": [p["file"] for p in photos if p.get("featured")],
             "count": len(photos),
             "photos": photos,
         })
@@ -812,8 +816,8 @@ class Handler(BaseHTTPRequestHandler):
                 "albums": [{
                     "folder": a["folder"], "slug": a["slug"], "title": a["title"],
                     "subtitle": a["subtitle"], "description": a["description"],
-                    "order": a["order"], "cover": a["cover"], "hidden": a["hidden"],
-                    "count": len(a["files"]), "files": a["files"],
+                    "order": a["order"], "cover": a["cover"], "featured": a["featured"],
+                    "hidden": a["hidden"], "count": len(a["files"]), "files": a["files"],
                 } for a in albums],
                 "repo": repo_info(cfg),
             })
@@ -870,7 +874,7 @@ class Handler(BaseHTTPRequestHandler):
             if not os.path.exists(os.path.join(full, "_album.json")):
                 write_json(os.path.join(full, "_album.json"), {
                     "slug": slugify(folder), "title": slugify(folder), "subtitle": "",
-                    "description": "", "cover": "", "orderSort": 100, "hidden": False, "order": [],
+                    "description": "", "cover": "", "featured": [], "orderSort": 100, "hidden": False, "order": [],
                 })
             return self.send_json({"ok": True, "folder": folder})
 
@@ -880,7 +884,7 @@ class Handler(BaseHTTPRequestHandler):
             if not os.path.exists(meta_path) and not os.path.isdir(os.path.dirname(meta_path)):
                 raise RuntimeError("相册不存在")
             meta = read_json(meta_path, {}) or {}
-            for key in ("slug", "title", "subtitle", "description", "cover", "orderSort", "hidden", "order"):
+            for key in ("slug", "title", "subtitle", "description", "cover", "featured", "orderSort", "hidden", "order"):
                 if key in data:
                     meta[key] = data[key]
             write_json(meta_path, meta)
@@ -908,7 +912,28 @@ class Handler(BaseHTTPRequestHandler):
             target = os.path.join(albums_dir, folder, name)
             if os.path.isfile(target):
                 os.remove(target)
+            meta_path = os.path.join(albums_dir, folder, "_album.json")
+            meta = read_json(meta_path, {}) or {}
+            meta["featured"] = [f for f in (meta.get("featured") or []) if f != name]
+            meta["order"] = [f for f in (meta.get("order") or []) if f != name]
+            write_json(meta_path, meta)
             return self.send_json({"ok": True})
+
+        if path == "/api/photo/feature":
+            folder = safe_name(data.get("folder") or "")
+            name = safe_name(data.get("file") or "")
+            target = os.path.join(albums_dir, folder, name)
+            if not os.path.isfile(target):
+                raise RuntimeError("照片不存在：%s" % name)
+            meta_path = os.path.join(albums_dir, folder, "_album.json")
+            meta = read_json(meta_path, {}) or {}
+            featured = [f for f in (meta.get("featured") or []) if f != name]
+            enabled = bool(data.get("featured"))
+            if enabled:
+                featured.append(name)
+            meta["featured"] = featured
+            write_json(meta_path, meta)
+            return self.send_json({"ok": True, "featured": enabled, "count": len(featured)})
 
         if path == "/api/photo/order":
             folder = safe_name(data.get("folder") or "")
