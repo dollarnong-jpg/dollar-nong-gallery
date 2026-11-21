@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>DOLLAR NONG · 摄影作品</title>
 <meta name="description" content="人像 · 美食 · 航拍 摄影作品集">
 <meta name="theme-color" content="#0c0c0d">
@@ -190,7 +193,43 @@
   <div class="lb-thumbs" id="lbThumbs"></div>
 </div>
 
-<script defer src="data/albums.js" onerror="window.__ALBUMS_MISSING__=true"></script>
-<script defer src="assets/site.js"></script>
+<script>
+(function () {
+  'use strict';
+  var loaded = false;
+
+  function loadSite() {
+    if (loaded) return;
+    loaded = true;
+    var site = document.createElement('script');
+    site.src = 'assets/site.js?v=20261121-cachefix';
+    site.defer = true;
+    document.body.appendChild(site);
+  }
+
+  function fallback() {
+    var legacy = document.createElement('script');
+    legacy.src = 'data/albums.js?v=' + Date.now();
+    legacy.onload = loadSite;
+    legacy.onerror = function () {
+      window.__ALBUMS_MISSING__ = true;
+      loadSite();
+    };
+    document.body.appendChild(legacy);
+  }
+
+  // GitHub Pages 会缓存静态脚本；作品数据改为 no-store 拉取，发布后无需等 10 分钟缓存。
+  fetch('data/albums.json?ts=' + Date.now(), { cache: 'no-store' })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function (data) {
+      window.__ALBUMS__ = data;
+      loadSite();
+    })
+    .catch(fallback);
+})();
+</script>
 </body>
 </html>

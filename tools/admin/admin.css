@@ -10,6 +10,10 @@ input[type=text],input[type=email],input[type=tel],textarea{font:inherit}
 .top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);flex:0 0 auto}
 .top-left{display:flex;align-items:center;gap:12px;min-width:0}
 .top-left strong{font-size:14px;letter-spacing:.06em}
+.status{font-size:11px;line-height:20px;padding:0 8px;border:1px solid var(--line);border-radius:999px;color:#8e939c;white-space:nowrap}
+.status.busy{border-color:rgba(201,168,106,.5);color:#e8d3a8}
+.status.ok{border-color:rgba(75,191,122,.55);color:#bff0d2}
+.status.err{border-color:rgba(216,97,90,.55);color:#f3c4c1}
 .dot{width:9px;height:9px;border-radius:50%;background:var(--ok);flex:0 0 auto;box-shadow:0 0 0 3px rgba(75,191,122,.15)}
 .dot.busy{background:var(--accent);box-shadow:0 0 0 3px rgba(201,168,106,.18)}
 .dot.err{background:var(--danger);box-shadow:0 0 0 3px rgba(216,97,90,.18)}

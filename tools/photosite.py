@@ -75,6 +75,10 @@ DEFAULT_SITE = {
 
 _run_log = []
 _log_lock = threading.Lock()
+_build_lock = threading.RLock()
+_jobs = {}
+_jobs_lock = threading.Lock()
+_job_seq = 0
 
 
 def log(msg):
@@ -388,7 +392,7 @@ def repo_info(cfg):
 # 构建
 # --------------------------------------------------------------------------
 
-def build(cfg, quiet=False):
+def _build(cfg, quiet=False):
     t0 = time.time()
     site = dict(DEFAULT_SITE)
     site.update(read_json(os.path.join(cfg["content"], "_site.json"), {}) or {})
@@ -439,6 +443,7 @@ def build(cfg, quiet=False):
                 if not os.path.exists(thumb_xs_dst):
                     make_derivative(cfg, src, thumb_xs_dst, cfg["thumbXsSize"], cfg["thumbXsQuality"])
                 w, h = image_size(thumb_dst)
+                version = "%d-%d" % (os.path.getsize(src), int(os.path.getmtime(src)))
             except Exception as exc:
                 log("跳过 %s: %s" % (filename, exc))
                 continue
@@ -453,6 +458,7 @@ def build(cfg, quiet=False):
                 "h": h,
                 "ratio": round(w / h, 4) if h else 1.0,
                 "title": os.path.splitext(filename)[0],
+                "v": version,
                 "lqip": make_lqip(cfg, src, lqip_cache),
             })
             total += 1
@@ -492,6 +498,7 @@ def build(cfg, quiet=False):
             "subtitle": album["subtitle"],
             "description": album["description"],
             "cover": cover,
+            "coverV": next((p["v"] for p in photos if p["src"] == cover), photos[0]["v"]),
             "coverLqip": next((p["lqip"] for p in photos if p["src"] == cover), photos[0]["lqip"]),
             "count": len(photos),
             "photos": photos,
@@ -516,33 +523,54 @@ def build(cfg, quiet=False):
     return payload
 
 
+def build(cfg, quiet=False):
+    """同一时间只允许一个构建，避免发布和监听线程互相覆盖产物。"""
+    with _build_lock:
+        return _build(cfg, quiet=quiet)
+
+
 # --------------------------------------------------------------------------
 # 发布
 # --------------------------------------------------------------------------
+
+def pages_url_from_remote(remote):
+    """从 GitHub remote 推导 Pages 地址。"""
+    m = re.search(r"github\.com[:/]([^/]+)/([^/]+?)(?:\.git)?$", str(remote or "").strip())
+    if not m:
+        return ""
+    user, repo = m.group(1), m.group(2)
+    return "https://%s.github.io/%s/" % (user.lower(), repo)
+
 
 def redact(text):
     """把 URL 里的 token / 密码遮掉，别让它进日志。"""
     return re.sub(r"//[^/@\s]+@", "//***@", str(text))
 
 
-def publish(cfg, message=None):
-    build(cfg, quiet=True)
+def publish(cfg, message=None, progress=None):
+    progress = progress or (lambda **_: None)
+    progress(phase="build", message="正在生成网站…")
+    payload = build(cfg, quiet=True)
     info = repo_info(cfg)
     if not info.get("isRepo"):
         raise RuntimeError("这里还不是 git 仓库。先执行：git init && git remote add origin <你的仓库地址>")
     message = message or ("更新作品 " + time.strftime("%Y-%m-%d %H:%M"))
     steps = [
-        # web 是网站产物；content 是相册文案/排序/封面等源数据，必须一起提交
-        ["git", "add", "-A", "web", "content", "tools"],
+        # web 是网站产物；content 是相册文案/排序/封面等源数据；
+        # tools 与 .github 包含管理台和部署修复，也必须一起提交。
+        ["git", "add", "-A", "web", "content", "tools", ".github"],
         ["git", "commit", "-m", message],
     ]
-    for step in steps:
+    progress(phase="commit", message="正在提交本地更新…")
+    for cmd_step in steps:
+        step = cmd_step
         code, out = run_cmd(step, cwd=PROJECT)
         if out:
             log("$ %s\n%s" % (" ".join(step), out))
         if code != 0 and "nothing to commit" not in out:
             raise RuntimeError("命令失败：%s\n%s" % (" ".join(step), out))
     if cfg.get("autoPush", True):
+        progress(phase="push", message="正在推送到 GitHub…")
         # 网络偶尔抽风，自动重试三次，省得手动再点一次「发布」
         remote = cfg.get("gitRemote", "origin")
         branch = cfg.get("gitBranch", "main")
@@ -557,7 +585,7 @@ def publish(cfg, message=None):
         for proxy in proxies:
             for attempt in range(1, 3):
                 tries += 1
-                cmd = ["git"] + (["-c", "http.proxy=" + proxy] if proxy else []) + ["push", remote, branch]
+                cmd = ["git"] + (["-c", "http.proxy=" + proxy] if proxy else []) + ["push", remote, "HEAD:%s" % branch]
                 code, out = run_cmd(cmd, cwd=PROJECT)
                 if out:
                     log("$ git push（第 %d 次%s）\n%s" % (tries, "，走代理" if proxy else "，直连", redact(out)))
@@ -571,7 +599,87 @@ def publish(cfg, message=None):
         if code != 0:
             raise RuntimeError("推送失败（已自动重试 3 次），请检查网络或仓库权限：\n%s" % out)
         log("已推送到 %s / %s" % (redact(info.get("remote", "")), cfg.get("gitBranch")))
-    return True
+    _, commit = run_cmd(["git", "rev-parse", "HEAD"], cwd=PROJECT)
+    live_url = pages_url_from_remote(info.get("remote", ""))
+    progress(phase="deploy", message="已推送，等待 GitHub Pages 上线…")
+    return {
+        "albumCount": len(payload.get("albums") or []),
+        "photoCount": payload.get("photoCount", 0),
+        "generated": payload.get("generated", ""),
+        "commit": commit.strip(),
+        "branch": cfg.get("gitBranch", "main"),
+        "remote": info.get("remote", ""),
+        "liveUrl": live_url,
+    }
+
+
+# --------------------------------------------------------------------------
+# 后台任务
+# --------------------------------------------------------------------------
+
+def _job_update(job_id, **fields):
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        if job:
+            job.update(fields)
+            job["updated"] = time.time()
+
+
+def _job_snapshot(job_id):
+    with _jobs_lock:
+        job = _jobs.get(job_id)
+        return dict(job) if job else None
+
+
+def start_job(kind, target):
+    global _job_seq
+    with _jobs_lock:
+        running = [j for j in _jobs.values() if j.get("state") == "running"]
+        if running:
+            raise RuntimeError("已有任务正在运行，请等它完成")
+        _job_seq += 1
+        job_id = "%s-%d-%d" % (kind, int(time.time()), _job_seq)
+        _jobs[job_id] = {
+            "id": job_id,
+            "kind": kind,
+            "state": "running",
+            "phase": kind,
+            "message": "正在准备…",
+            "started": time.time(),
+            "updated": time.time(),
+            "result": None,
+            "error": "",
+        }
+
+    def worker():
+        try:
+            result = target(job_id)
+            _job_update(job_id, state="ok", phase="done", message="任务完成", result=result,
+                        finished=time.time())
+        except Exception as exc:
+            log("任务失败 %s: %s" % (kind, exc))
+            _job_update(job_id, state="error", phase="error", message="任务失败",
+                        error=str(exc), finished=time.time())
+
+    threading.Thread(target=worker, daemon=True, name="photosite-" + kind).start()
+    return job_id
+
+
+def run_build_job(cfg, job_id):
+    _job_update(job_id, message="正在生成缩略图和页面数据…")
+    payload = build(cfg, quiet=True)
+    return {
+        "albumCount": len(payload.get("albums") or []),
+        "photoCount": payload.get("photoCount", 0),
+        "generated": payload.get("generated", ""),
+    }
+
+
+def run_publish_job(cfg, job_id):
+    def progress(**fields):
+        _job_update(job_id, **fields)
+
+    return publish(cfg, progress=progress)
 
 
 # --------------------------------------------------------------------------
@@ -614,6 +722,8 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", CONTENT_TYPES.get(ext, "application/octet-stream"))
         self.send_header("Content-Length", str(size))
+        if ext in (".html", ".js", ".css", ".json"):
+            self.send_header("Cache-Control", "no-store")
         if download_name:
             self.send_header("Content-Disposition", 'attachment; filename="%s"' % download_name)
         self.end_headers()
@@ -687,6 +797,12 @@ class Handler(BaseHTTPRequestHandler):
                 } for a in albums],
                 "repo": repo_info(cfg),
             })
+        if path == "/api/job":
+            job_id = (query.get("id") or [""])[0]
+            job = _job_snapshot(job_id)
+            if not job:
+                return self.send_json({"ok": False, "error": "任务不存在或已过期"}, 404)
+            return self.send_json({"ok": True, "job": job})
         if path == "/api/log":
             return self.send_json({"ok": True, "lines": tail_log()})
         if path == "/api/duplicates":
@@ -783,12 +899,12 @@ class Handler(BaseHTTPRequestHandler):
             return self.send_json({"ok": True})
 
         if path == "/api/build":
-            payload = build(cfg, quiet=True)
-            return self.send_json({"ok": True, "albumCount": len(payload["albums"]), "photoCount": payload["photoCount"]})
+            job_id = start_job("build", lambda jid: run_build_job(cfg, jid))
+            return self.send_json({"ok": True, "jobId": job_id})
 
         if path == "/api/publish":
-            publish(cfg, data.get("message"))
-            return self.send_json({"ok": True})
+            job_id = start_job("publish", lambda jid: run_publish_job(cfg, jid))
+            return self.send_json({"ok": True, "jobId": job_id})
 
         if path == "/api/git/init":
             remote = (data.get("remote") or "").strip()

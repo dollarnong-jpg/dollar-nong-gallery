@@ -91,15 +91,21 @@
     if (el) el.textContent = text;
   }
 
+  function asset(url, version) {
+    if (!url || !version) return url;
+    return url + (url.indexOf('?') >= 0 ? '&' : '?') + 'v=' + encodeURIComponent(version);
+  }
+
   function bg(el, photo) {
     if (!el || !photo) return;
     if (photo.lqip) el.style.backgroundImage = 'url(' + photo.lqip + ')';
+    var src = asset(photo.src, photo.v);
     var img = new Image();
     img.onload = function () {
-      el.style.backgroundImage = 'url("' + photo.src + '")';
+      el.style.backgroundImage = 'url("' + src + '")';
       el.classList.add('loaded');
     };
-    img.src = photo.src;
+    img.src = src;
   }
 
   /* ------------------------------------------------------------------ 首屏轮播 */
@@ -123,9 +129,10 @@
       if (!slides[i] || loaded[i]) return;
       loaded[i] = true;
       var photo = pool[i];
+      var src = asset(photo.src, photo.v);
       var img = new Image();
-      img.onload = function () { slides[i].style.backgroundImage = 'url("' + photo.src + '")'; };
-      img.src = photo.src;
+      img.onload = function () { slides[i].style.backgroundImage = 'url("' + src + '")'; };
+      img.src = src;
     }
     // 首屏只拉第一张大图，其余在后台分次预取，避免一次下载 4 张
     loadSlide(0);
@@ -157,7 +164,7 @@
     box.innerHTML = ALBUMS.map(function (a) {
       var cover = a.coverLqip ? 'style="background-image:url(' + a.coverLqip + ')"' : '';
       return '<article class="album-card reveal" data-slug="' + esc(a.slug) + '">' +
-        '<div class="cover" ' + cover + '><img alt="' + esc(a.title) + '" loading="lazy" decoding="async" data-src="' + esc(a.cover) + '"></div>' +
+        '<div class="cover" ' + cover + '><img alt="' + esc(a.title) + '" loading="lazy" decoding="async" data-src="' + esc(asset(a.cover, a.coverV)) + '"></div>' +
         '<span class="num">' + (a.count || 0) + ' 张</span>' +
         '<div class="meta"><h3>' + esc(a.title) + '</h3><p>' + esc(a.subtitle || a.description || '') + '</p></div>' +
         '</article>';
@@ -211,11 +218,11 @@
         img.loading = 'lazy';
         img.decoding = 'async';
         if (p.thumbSm) {
-          img.srcset = p.thumbSm + ' 480w, ' + p.thumb + ' 900w';
+          img.srcset = asset(p.thumbSm, p.v) + ' 480w, ' + asset(p.thumb, p.v) + ' 900w';
           img.sizes = Math.round(w) + 'px';
         }
         img.onload = function () { img.classList.add('ready'); };
-        img.src = p.thumb;
+        img.src = asset(p.thumb, p.v);
         fig.appendChild(img);
         fig.addEventListener('click', function () { openLightbox(photos, photos.indexOf(p)); });
         rowEl.appendChild(fig);
@@ -385,7 +392,7 @@
     resetZoom(false);
     img.classList.remove('ready');
     img.onload = function () { img.classList.add('ready'); };
-    img.src = p.src;
+    img.src = asset(p.src, p.v);
     img.alt = p.caption || ((currentAlbum ? currentAlbum.title : '作品') + ' 第 ' + (lbIdx + 1) + ' 张');
     setText('#lbCap', p.caption || '');
     setText('#lbIdx', (lbIdx + 1) + ' / ' + lbList.length);
@@ -394,13 +401,13 @@
     if (thumbs[lbIdx]) thumbs[lbIdx].scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
     [lbIdx + 1, lbIdx - 1].forEach(function (n) {
       var q = lbList[(n + lbList.length) % lbList.length];
-      if (q) { var pre = new Image(); pre.src = q.src; }
+      if (q) { var pre = new Image(); pre.src = asset(q.src, q.v); }
     });
   }
 
   function renderThumbs() {
     $('#lbThumbs').innerHTML = lbList.map(function (p, i) {
-      return '<img src="' + (p.thumbXs || p.thumbSm || p.thumb) + '" data-i="' + i + '" alt="" loading="lazy" decoding="async">';
+      return '<img src="' + asset(p.thumbXs || p.thumbSm || p.thumb, p.v) + '" data-i="' + i + '" alt="" loading="lazy" decoding="async">';
     }).join('');
     $('#lbThumbs').querySelectorAll('img').forEach(function (t) {
       t.addEventListener('click', function () { show(parseInt(t.dataset.i, 10)); });

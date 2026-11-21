@@ -15,20 +15,93 @@
     toast._t = setTimeout(function () { t.hidden = true; }, 3600);
   }
 
+  function setStatus(text, kind) {
+    var el = $('#statusText');
+    if (!el) return;
+    el.textContent = text;
+    el.className = 'status' + (kind ? ' ' + kind : '');
+  }
+
   function busy(on, kind) {
     $('#dot').className = 'dot' + (on ? ' busy' : (kind === 'err' ? ' err' : ''));
     ['#buildBtn', '#publishBtn'].forEach(function (s) { $(s).disabled = !!on; });
   }
 
   function api(path, body, method) {
-    return fetch(path, {
+    var opts = {
       method: method || 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: body ? JSON.stringify(body) : undefined
-    }).then(function (r) { return r.json(); }).then(function (j) {
-      if (!j.ok) throw new Error(j.error || '操作失败');
-      return j;
+      cache: 'no-store'
+    };
+    if (body) {
+      opts.headers = { 'Content-Type': 'application/json' };
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function (r) {
+      return r.text().then(function (text) {
+        var j;
+        try { j = text ? JSON.parse(text) : {}; }
+        catch (e) { throw new Error('管理台返回了无法解析的内容（HTTP ' + r.status + '）'); }
+        if (!r.ok || !j.ok) throw new Error(j.error || ('请求失败（HTTP ' + r.status + '）'));
+        return j;
+      });
     });
+  }
+
+  function trackJob(path, body, label) {
+    return api(path, body).then(function (start) {
+      if (!start.jobId) throw new Error('后台没有返回任务编号');
+      return new Promise(function (resolve, reject) {
+        var failures = 0;
+        function poll() {
+          api('/api/job?id=' + encodeURIComponent(start.jobId), null, 'GET').then(function (d) {
+            failures = 0;
+            var job = d.job || {};
+            setStatus(job.message || (label + '中…'), 'busy');
+            if (job.state === 'ok') return resolve(job.result || {});
+            if (job.state === 'error') return reject(new Error(job.error || (label + '失败')));
+            setTimeout(poll, 900);
+          }).catch(function (e) {
+            failures += 1;
+            if (failures >= 8) return reject(e);
+            setTimeout(poll, 1500);
+          });
+        }
+        poll();
+      });
+    });
+  }
+
+  function waitForLive(result) {
+    if (!result.liveUrl || !result.generated) return Promise.resolve(result);
+    var started = Date.now();
+    var timeout = 8 * 60 * 1000;
+    var dataUrl = result.liveUrl.replace(/\/?$/, '/') + 'data/albums.json';
+
+    function check() {
+      var probe = dataUrl + '?ts=' + Date.now() + '&generated=' + encodeURIComponent(result.generated);
+      return fetch(probe, { cache: 'no-store' }).then(function (r) {
+        if (!r.ok) throw new Error('线上数据暂时读取不到（HTTP ' + r.status + '）');
+        return r.json();
+      }).then(function (data) {
+        if (data.generated === result.generated) {
+          setStatus('线上已更新 · ' + (data.photoCount || result.photoCount || 0) + ' 张', 'ok');
+          return result;
+        }
+        if (Date.now() - started > timeout) {
+          throw new Error('代码已推送，但 GitHub Pages 8 分钟内没有上线。请打开 GitHub Actions 查看部署状态后重新发布。');
+        }
+        var waited = Math.max(1, Math.round((Date.now() - started) / 1000));
+        setStatus('已推送，等待 GitHub Pages 上线（' + waited + ' 秒）…', 'busy');
+        return new Promise(function (resolve) { setTimeout(resolve, 4000); }).then(check);
+      }).catch(function (e) {
+        if (Date.now() - started > timeout) {
+          throw new Error('代码已推送，但 GitHub Pages 8 分钟内没有上线。请打开 GitHub Actions 查看部署状态后重新发布。');
+        }
+        setStatus('网络检查中，稍后自动重试…', 'busy');
+        return new Promise(function (resolve) { setTimeout(resolve, 4000); }).then(check);
+      });
+    }
+    return check();
   }
 
   /* ---------------------------------------------------------------- 状态 */
@@ -337,18 +410,31 @@
   });
 
   $('#buildBtn').addEventListener('click', function () {
-    busy(true); toast('正在生成缩略图和页面数据…');
-    api('/api/build').then(function (r) {
-      busy(false); toast('生成完成：' + r.albumCount + ' 个相册 / ' + r.photoCount + ' 张照片', 'ok'); pullLog();
-    }).catch(function (e) { busy(false, 'err'); toast(e.message, 'err'); });
+    busy(true); setStatus('正在生成…', 'busy'); toast('正在生成缩略图和页面数据…');
+    trackJob('/api/build', {}, '生成').then(function (r) {
+      busy(false);
+      setStatus('生成完成 · ' + (r.photoCount || 0) + ' 张', 'ok');
+      toast('生成完成：' + r.albumCount + ' 个相册 / ' + r.photoCount + ' 张照片', 'ok');
+      pullLog();
+    }).catch(function (e) {
+      busy(false, 'err'); setStatus('生成失败', 'err'); toast(e.message, 'err'); pullLog();
+    });
   });
 
   $('#publishBtn').addEventListener('click', function () {
-    if (!confirm('发布会把生成的网站提交并推送到 GitHub，线上几分钟后更新。继续？')) return;
-    busy(true); toast('正在发布…');
-    api('/api/publish', {}).then(function () {
-      busy(false); toast('已推送。稍等 1-2 分钟刷新线上站点', 'ok'); pullLog();
-    }).catch(function (e) { busy(false, 'err'); toast(e.message, 'err'); pullLog(); });
+    if (!confirm('发布会自动生成、提交并推送到 GitHub，然后等你线上真正更新后才提示成功。继续？')) return;
+    busy(true); setStatus('正在发布…', 'busy'); toast('正在发布，请保持管理台打开…');
+    trackJob('/api/publish', {}, '发布').then(function (r) {
+      setStatus('已推送，等待线上更新…', 'busy');
+      return waitForLive(r);
+    }).then(function (r) {
+      busy(false);
+      toast('发布成功：线上已是 ' + (r.photoCount || 0) + ' 张照片', 'ok');
+      setStatus('线上已更新 · ' + (r.photoCount || 0) + ' 张', 'ok');
+      pullLog();
+    }).catch(function (e) {
+      busy(false, 'err'); setStatus('发布未确认', 'err'); toast(e.message, 'err'); pullLog();
+    });
   });
 
   $('#modalCancel').addEventListener('click', closeModal);
